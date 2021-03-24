@@ -3,7 +3,7 @@ import time
 
 class StereoCam:
     """Class to handle a camera pair as a synchronized stereo pair"""
-    def __init__(self, leftID, rightID, width = 480, height = 240, fps=2):
+    def __init__(self, leftID, rightID, width = 540, height = 360, fps=2):
         self.leftCam = cv2.VideoCapture(leftID)
         self.rightCam = cv2.VideoCapture(rightID)
         self.leftCam.set(3, width)
@@ -22,8 +22,9 @@ class StereoCam:
 
     def grabFrame(self):
         """Grab a frame from both cameras at the same time"""
-        self.leftCam.grab()
-        self.rightCam.grab()
+        for i in range(10):
+            self.leftCam.grab()
+            self.rightCam.grab()
 
     def retrieveFrame(self):
         """Retrieve the grabbed frames"""
@@ -51,7 +52,7 @@ class StereoCam:
         cv2.destroyAllWindows()
 
 if __name__=='__main__':
-    Stereo = StereoCam(leftID=0, rightID=2, width=480, height=240, fps=2)
+    Stereo = StereoCam(leftID=0, rightID=2, width=540, height=360, fps=2)
     if Stereo.checkOpen():
         Stereo.camPreview()
     else:
