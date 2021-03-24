@@ -37,23 +37,23 @@ class StereoCam:
     
     def camPreview(self):
         """Preview the camera outputs"""
-        self.grabFrame()
-        retVal = self.retrieveFrame()
-        while retVal:
-            if ((time.time()-self.previousTime)>=self.frameTime):
-                self.previousTime = time.time()
-                self.grabFrame()
-                retVal = self.retrieveFrame()
-                cv2.imshow('Left', self.leftImg)
-                cv2.imshow('Right', self.rightImg)
-                key = cv2.waitKey(20)
-                if key == 27: # Exit on ESC
-                    break
-        cv2.destroyAllWindows()
+        if self.checkOpen():
+            self.grabFrame()
+            retVal = self.retrieveFrame()
+            while retVal:
+                if ((time.time()-self.previousTime)>=self.frameTime):
+                    self.previousTime = time.time()
+                    self.grabFrame()
+                    retVal = self.retrieveFrame()
+                    cv2.imshow('Left', self.leftImg)
+                    cv2.imshow('Right', self.rightImg)
+                    key = cv2.waitKey(20)
+                    if key == 27: # Exit on ESC
+                        break
+            cv2.destroyAllWindows()
+        else:
+            print('Could not initialize camera pair')
 
 if __name__=='__main__':
     Stereo = StereoCam(leftID=0, rightID=2, width=540, height=360, fps=2)
-    if Stereo.checkOpen():
-        Stereo.camPreview()
-    else:
-        print('Could not initialize camera pair')
+    Stereo.camPreview()
