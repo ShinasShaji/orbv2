@@ -28,7 +28,8 @@ class StereoCam:
 
         # Capture details
         self.imgCounter = 0
-        self.capturePath = "/home/pi/Documents/orbv2/captures" # Irrelevant if run elsewhere             
+        self.capturePath = "captures/" 
+
 
     def checkOpen(self):
         """Check if cameras have initialized"""
@@ -37,11 +38,13 @@ class StereoCam:
         else:
             return False
 
+
     def grabFrame(self):
         """Grab a frame from both cameras at the same time"""
         for i in range(10):
             self.leftCam.grab()
             self.rightCam.grab()
+
 
     def retrieveFrame(self):
         """Retrieve the grabbed frames"""
@@ -52,6 +55,7 @@ class StereoCam:
         else:
             return False
 
+
     def captureImages(self):
         """Capture and save images from both cameras"""
         for (cam, frame) in [("left", self.leftImg), ("right", self.rightImg)]:
@@ -59,6 +63,7 @@ class StereoCam:
             cv2.imwrite(os.path.join(self.capturePath, imgName), frame)
             print("Captured {}".format(imgName))
         self.imgCounter += 1
+
     
     def camPreview(self):
         """Preview the camera outputs"""
@@ -68,15 +73,19 @@ class StereoCam:
             while retVal:
                 if ((time.time()-self.previousTime)>=self.frameTime):
                     self.previousTime = time.time()
+
                     self.grabFrame()
                     retVal = self.retrieveFrame()
+
                     cv2.imshow('Left', self.leftImg)
                     cv2.imshow('Right', self.rightImg)
+
                     key = cv2.waitKey(20)
                     if key == 27: # Exit on ESC
                         break
                     if key == 32: # Capture on SPACE
                         self.captureImages()
+
             cv2.destroyAllWindows()
         else:
             print('Could not initialize camera pair')
@@ -98,7 +107,7 @@ class StereoCam:
             self.imagePoints = [] # 2D points in image plane
 
             # Pull up checkerboard images
-            self.images = glob.glob('/capture/calibrate/*.png')
+            self.images = glob.glob('captures/calibrate/*.png')
 
         def findCorners(self):
             """Find chessboard corners on images from folder"""
