@@ -1,6 +1,10 @@
-import cv2
-import time
+import glob
 import os
+import time
+
+import cv2
+import numpy as np
+
 
 class StereoCam:
     """Class to handle a camera pair as a synchronized stereo pair"""
@@ -24,10 +28,10 @@ class StereoCam:
 
         # Capture details
         self.imgCounter = 0
-        self.capturePath = "/home/pi/Documents/orbv2/captures"
+        self.capturePath = "/home/pi/Documents/orbv2/captures" # Irrelevant if run elsewhere             
 
     def checkOpen(self):
-        """Check if the cameras have initialized"""
+        """Check if cameras have initialized"""
         if self.leftCam.isOpened() and self.rightCam.isOpened():
             return True
         else:
@@ -75,6 +79,45 @@ class StereoCam:
             cv2.destroyAllWindows()
         else:
             print('Could not initialize camera pair')
+
+
+    class Calibrate:
+        def __init__(self):
+            self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+            self.chessBoardSize = (7, 6)
+
+            # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+            self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
+            self.objectPointPrep[:,:2] = np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2)
+
+            # Arrays to store object points and image points from all the images
+            self.objectPoints = [] # 3D point in real world space
+            self.imagePoints = [] # 2D points in image plane
+
+            # Pull up checkerboard images
+            self.images = glob.glob('/capture/calibrate/*.png')
+
+        def findCorners(self):
+            for fileName in self.images:
+                image = cv2.imread(fileName)
+                grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                # Find the chess board corners
+                retVal, corners = cv2.findChessboardCorners(grayImage, self.chessBoardSize, None)
+
+                # If found, add object points, image points (after refining them)
+                if retVal == True:
+                    self.objectPoints.append(self.objectPointPrep)
+                    subPixCorners = cv2.cornerSubPix(grayImage, corners, (11,11), (-1,-1), self.cornerSubPixCriteria)
+                    self.imagePoints.append(subPixCorners)
+
+                    # Draw and display the corners
+                    cv2.drawChessboardCorners(image, (7,6), subPixCorners, retVal)
+                    cv2.imshow('Chessboard', image)
+                    cv2.waitKey(500)
+
+            cv2.destroyAllWindows()
+
 
 if __name__=="__main__":
     Stereo = StereoCam(leftID=0, rightID=2, width=1280, height=720, fps=2)
