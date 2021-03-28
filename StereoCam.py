@@ -4,17 +4,25 @@ import os
 
 class StereoCam:
     """Class to handle a camera pair as a synchronized stereo pair"""
-    def __init__(self, leftID, rightID, width = 640, height = 360, fps=2):
+    def __init__(self, leftID, rightID, width = 1280, height = 720, fps=2):
         self.leftCam = cv2.VideoCapture(leftID)
         self.rightCam = cv2.VideoCapture(rightID)
+
+        # Set camera resolution
         self.leftCam.set(3, width)
         self.leftCam.set(4, height)
         self.rightCam.set(3, width)
         self.rightCam.set(4, height)
+
+        # Set format to MJPG in FourCC format 
+        self.leftCam.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+        self.rightCam.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+
+        # Timing
         self.previousTime = time.time()
         self.frameTime = float(1/fps)
 
-        # Capture
+        # Capture details
         self.imgCounter = 0
         self.capturePath = "/home/pi/Documents/orbv2/captures"
 
@@ -68,6 +76,6 @@ class StereoCam:
         else:
             print('Could not initialize camera pair')
 
-if __name__=='__main__':
-    Stereo = StereoCam(leftID=0, rightID=2, width=640, height=360, fps=2)
+if __name__=="__main__":
+    Stereo = StereoCam(leftID=0, rightID=2, width=1280, height=720, fps=2)
     Stereo.camPreview()
