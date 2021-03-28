@@ -53,6 +53,7 @@ class StereoCam:
             return False
 
     def captureImages(self):
+        """Capture and save images from both cameras"""
         for (cam, frame) in [("left", self.leftImg), ("right", self.rightImg)]:
             imgName = "".join([cam, "_{}.png".format(self.imgCounter)])
             cv2.imwrite(os.path.join(self.capturePath, imgName), frame)
@@ -82,15 +83,17 @@ class StereoCam:
 
 
     class Calibrate:
+        """Class for camera calibration"""
         def __init__(self):
             self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
             self.chessBoardSize = (7, 6)
+            self.squareSize = 1 # mm
 
             # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
             self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
-            self.objectPointPrep[:,:2] = np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2)
+            self.objectPointPrep[:,:2] = np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
 
-            # Arrays to store object points and image points from all the images
+            # Arrays to store object points and image points from all images
             self.objectPoints = [] # 3D point in real world space
             self.imagePoints = [] # 2D points in image plane
 
@@ -98,6 +101,7 @@ class StereoCam:
             self.images = glob.glob('/capture/calibrate/*.png')
 
         def findCorners(self):
+            """Find chessboard corners on images from folder"""
             for fileName in self.images:
                 image = cv2.imread(fileName)
                 grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -112,7 +116,7 @@ class StereoCam:
                     self.imagePoints.append(subPixCorners)
 
                     # Draw and display the corners
-                    cv2.drawChessboardCorners(image, (7,6), subPixCorners, retVal)
+                    cv2.drawChessboardCorners(image, self.chessBoardSize, subPixCorners, retVal)
                     cv2.imshow('Chessboard', image)
                     cv2.waitKey(500)
 
