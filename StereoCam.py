@@ -50,6 +50,7 @@ class StereoCam:
         """Retrieve the grabbed frames"""
         retLeft, self.leftImg = self.leftCam.retrieve()
         retRight, self.rightImg = self.rightCam.retrieve()
+
         if retLeft and retRight:
             return True
         else:
@@ -62,6 +63,7 @@ class StereoCam:
             imgName = "".join([cam, "_{}.png".format(self.imgCounter)])
             cv2.imwrite(os.path.join(self.capturePath, imgName), frame)
             print("Captured {}".format(imgName))
+
         self.imgCounter += 1
 
     
@@ -70,6 +72,7 @@ class StereoCam:
         if self.checkOpen():
             self.grabFrame()
             retVal = self.retrieveFrame()
+
             while retVal:
                 if ((time.time()-self.previousTime)>=self.frameTime):
                     self.previousTime = time.time()
@@ -87,18 +90,32 @@ class StereoCam:
                         self.captureImages()
 
             cv2.destroyAllWindows()
+            
         else:
             print('Could not initialize camera pair')
 
+
     def loadCalibration(self, path="data/calibration.json"):
+        """Load calibration matrices from jsons"""
+        path = {"left":"".join([path.replace(".json", ""), "_left.json"]), \
+                "right":"".join([path.replace(".json", ""), "_right.json"])}
+
         try:
-            with open(path, "r") as matrixJson:
-                calibrationDict = json.load(matrixJson)
-                self.cameraMatrix = np.array(calibrationDict["cameraMatrix"])
-                self.distortionMatrix = np.array(calibrationDict["distortionCoefficients"])
+            for camera in ["left", "right"]:
+                with open(path[camera], "r") as matrixJson:
+                    calibrationDict = json.load(matrixJson)
+
+                    if camera=="left":
+                        self.leftCameraMatrix = np.array(calibrationDict["cameraMatrix"])
+                        self.leftDistortionMatrix = np.array(calibrationDict["distortionCoefficients"])
+                    elif camera=="right":
+                        self.rightCameraMatrix = np.array(calibrationDict["cameraMatrix"])
+                        self.rightDistortionMatrix = np.array(calibrationDict["distortionCoefficients"])
+
             print("Calibration loaded")
+
         except:
-            print("Could not load array")
+            print("Could not load calibration")
 
 
 if __name__=="__main__":

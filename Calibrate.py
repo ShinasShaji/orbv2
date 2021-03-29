@@ -27,6 +27,7 @@ class Calibrate:
         # Flag
         self.calibrated = False
 
+
     def findCorners(self):
         """Find chessboard corners on images from folder"""
         self.calibrated = False
@@ -51,17 +52,23 @@ class Calibrate:
 
         cv2.destroyAllWindows()
         
+
     def calibrate(self):
+        """Calculate camera matrix, distortion coefficients and rotation and translation vectors"""
         retVal, self.cameraMatrix, self.distortionCoeffs, self.rotationVecs, self.translationVecs = \
             cv2.calibrateCamera(self.objectPoints, self.imagePoints, self.grayImage.shape[::-1], None, None)
+
         if retVal:
             self.calibrated = True
             print("Calibration complete")
+
         else:
             self.calibrated = False
             print("Calibration failed")
+
             
     def printResults(self):
+        """Print calibration results"""
         if self.calibrated:
             with np.printoptions(precision=3, suppress=True):
                 print("Camera matrix:\n", self.cameraMatrix, "\n")
@@ -71,9 +78,19 @@ class Calibrate:
         else:
             print("Not calibrated yet")
 
-    def exportResults(self, path="data/calibration.json"):
+
+    def exportResults(self, path="data/calibration.json", leftCam=True):
+        """Export results as json for later retrieval"""
         results = {"cameraMatrix" : self.cameraMatrix.tolist(), \
                    "distortionCoefficients" : self.distortionCoeffs.tolist()}
-        with open(path, "w") as resultJson: 
-            json.dump(results, resultJson, sort_keys=True, indent=4)
-        print("Exported to calibration.json")
+
+        if leftCam:
+            path = "".join([path.replace(".json", ""), "_left.json"])
+        else:
+            path = "".join([path.replace(".json", ""), "_right.json"])
+
+        resultJson = open(path, "w")
+        json.dump(results, resultJson, sort_keys=True, indent=4)
+        resultJson.close()
+
+        print("Exported as", path)
