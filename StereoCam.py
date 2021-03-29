@@ -1,7 +1,7 @@
 import glob
+import json
 import os
 import time
-import json
 
 import cv2
 import numpy as np
@@ -91,6 +91,16 @@ class StereoCam:
         else:
             print('Could not initialize camera pair')
 
+    def loadCalibration(self, path="data/calibration.json"):
+        try:
+            with open(path, "r") as matrixJson:
+                calibrationDict = json.load(matrixJson)
+                self.cameraMatrix = np.array(calibrationDict["cameraMatrix"])
+                self.distortionMatrix = np.array(calibrationDict["distortionCoefficients"])
+            print("Calibration loaded")
+        except:
+            print("Could not load array")
+
 
 class Calibrate:
     """Class for camera calibration"""
@@ -158,10 +168,10 @@ class Calibrate:
         else:
             print("Not calibrated yet")
 
-    def exportResults(self):
-        results = {"CameraMatrix" : self.cameraMatrix.tolist(), \
-                   "DistortionCoefficients" : self.distortionCoeffs.tolist()}
-        with open("calibration.json", "w") as resultJson: 
+    def exportResults(self, path="data/calibration.json"):
+        results = {"cameraMatrix" : self.cameraMatrix.tolist(), \
+                   "distortionCoefficients" : self.distortionCoeffs.tolist()}
+        with open(path, "w") as resultJson: 
             json.dump(results, resultJson, sort_keys=True, indent=4)
         print("Exported to calibration.json")
 
