@@ -101,7 +101,8 @@ class StereoCam:
 
             # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0), multiplied by square size
             self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
-            self.objectPointPrep[:,:2] = np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
+            self.objectPointPrep[:,:2] = \
+                np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
 
             # Arrays to store object points and image points from all images
             self.objectPoints = [] # 3D point in real world space
@@ -150,15 +151,16 @@ class StereoCam:
         def printResults(self):
             if self.calibrated:
                 with np.printoptions(precision=3, suppress=True):
-                    print("Camera matrix:\n\n", self.cameraMatrix, "\n")
-                    print("Distortion coefficients:\n\n", self.distortionCoeffs, "\n")
-                    print("Rotation vectors:\n\n", self.rotationVecs, "\n")
-                    print("Translation vectors:\n\n", self.translationVecs, "\n")
+                    print("Camera matrix:\n", self.cameraMatrix, "\n")
+                    print("Distortion coefficients:\n", self.distortionCoeffs, "\n")
+                    print("Rotation vectors:\n", self.rotationVecs, "\n")
+                    print("Translation vectors:\n", self.translationVecs, "\n")
             else:
                 print("Not calibrated yet")
 
         def exportResults(self):
-            results = {"CameraMatrix" : self.cameraMatrix.tolist()}
+            results = {"CameraMatrix" : self.cameraMatrix.tolist(), \
+                       "DistortionCoefficients" : self.distortionCoeffs.tolist()}
             with open("calibration.json", "w") as resultJson: 
                 json.dump(results, resultJson)
             print("Exported to calibration.json")
