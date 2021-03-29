@@ -1,6 +1,7 @@
 import glob
 import os
 import time
+import json
 
 import cv2
 import numpy as np
@@ -98,7 +99,7 @@ class StereoCam:
             self.chessBoardSize = chessBoardSize
             self.squareSize = squareSize # mm
 
-            # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+            # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0), multiplied by square size
             self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
             self.objectPointPrep[:,:2] = np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
 
@@ -109,19 +110,24 @@ class StereoCam:
             # Pull up checkerboard images
             self.images = glob.glob(path)
 
+            # Flag
+            self.calibrated = False
+
         def findCorners(self):
             """Find chessboard corners on images from folder"""
+            self.calibrated = False
+
             for fileName in self.images:
                 image = cv2.imread(fileName)
-                grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                self.grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
                 # Find the chess board corners
-                retVal, corners = cv2.findChessboardCorners(grayImage, self.chessBoardSize, None)
+                retVal, corners = cv2.findChessboardCorners(self.grayImage, self.chessBoardSize, None)
 
                 # If found, add object points, image points (after refining them)
                 if retVal == True:
                     self.objectPoints.append(self.objectPointPrep)
-                    subPixCorners = cv2.cornerSubPix(grayImage, corners, (11,11), (-1,-1), self.cornerSubPixCriteria)
+                    subPixCorners = cv2.cornerSubPix(self.grayImage, corners, (11,11), (-1,-1), self.cornerSubPixCriteria)
                     self.imagePoints.append(subPixCorners)
 
                     # Draw and display the corners
@@ -130,6 +136,32 @@ class StereoCam:
                     cv2.waitKey(500)
 
             cv2.destroyAllWindows()
+        
+        def calibrate(self):
+            retVal, self.cameraMatrix, self.distortionCoeffs, self.rotationVecs, self.translationVecs = \
+                cv2.calibrateCamera(self.objectPoints, self.imagePoints, self.grayImage.shape[::-1], None, None)
+            if retVal:
+                self.calibrated = True
+                print("Calibration complete")
+            else:
+                self.calibrated = False
+                print("Calibration failed")
+            
+        def printResults(self):
+            if self.calibrated:
+                with np.printoptions(precision=3, suppress=True):
+                    print("Camera matrix:\n\n", self.cameraMatrix, "\n")
+                    print("Distortion coefficients:\n\n", self.distortionCoeffs, "\n")
+                    print("Rotation vectors:\n\n", self.rotationVecs, "\n")
+                    print("Translation vectors:\n\n", self.translationVecs, "\n")
+            else:
+                print("Not calibrated yet")
+
+        def exportResults(self):
+            results = {"CameraMatrix" : self.cameraMatrix.tolist()}
+            with open("calibration.json", "w") as resultJson: 
+                json.dump(results, resultJson)
+            print("Exported to calibration.json")
 
 
 if __name__=="__main__":
