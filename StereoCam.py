@@ -93,10 +93,10 @@ class StereoCam:
 
     class Calibrate:
         """Class for camera calibration"""
-        def __init__(self):
+        def __init__(self, chessBoardSize, squareSize, path = "captures/calibrate/*.png"):
             self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-            self.chessBoardSize = (7, 6)
-            self.squareSize = 1 # mm
+            self.chessBoardSize = chessBoardSize
+            self.squareSize = squareSize # mm
 
             # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
             self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
@@ -107,7 +107,7 @@ class StereoCam:
             self.imagePoints = [] # 2D points in image plane
 
             # Pull up checkerboard images
-            self.images = glob.glob('captures/calibrate/*.png')
+            self.images = glob.glob(path)
 
         def findCorners(self):
             """Find chessboard corners on images from folder"""
