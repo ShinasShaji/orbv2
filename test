@@ -1,0 +1,28 @@
+num_disparities = 6*16
+    block_size = 11
+    
+    min_disparity = 0
+    window_size = 6
+    
+    img_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
+    img_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
+
+    
+    # Stereo BM matcher
+    left_matcher_BM = cv2.StereoBM_create(
+        numDisparities=num_disparities,
+        blockSize=block_size
+    )
+
+    # Stereo SGBM matcher
+    left_matcher_SGBM = cv2.StereoSGBM_create(
+        minDisparity=min_disparity,
+        numDisparities=num_disparities,
+        blockSize=block_size,
+        P1=8 * 3 * window_size ** 2,
+        P2=32 * 3 * window_size ** 2,
+        mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
+    )
+
+    # Compute the left disparity map
+    disp_left = left_matcher_SGBM.compute(img_left, img_right).astype(np.float32)/16
