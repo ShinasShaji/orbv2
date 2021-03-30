@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import threading
 
 import cv2
 import numpy as np
@@ -30,6 +31,13 @@ class StereoCam:
         self.imgCounter = 0
         self.capturePath = "captures/" 
 
+        # Disparity
+        self.numDisparities = 6*16
+        self.blockSize = 11
+    
+        self.minDisparity = 0
+        self.windowSize = 6
+
 
     def checkOpen(self):
         """Check if cameras have initialized"""
@@ -39,15 +47,12 @@ class StereoCam:
             return False
 
 
-    def grabFrame(self):
-        """Grab a frame from both cameras at the same time"""
+    def getFrames(self):
+        """Grab and retrieve frames"""
         for i in range(10):
             self.leftCam.grab()
             self.rightCam.grab()
 
-
-    def retrieveFrame(self):
-        """Retrieve the grabbed frames"""
         retLeft, self.leftImg = self.leftCam.retrieve()
         retRight, self.rightImg = self.rightCam.retrieve()
 
@@ -67,18 +72,16 @@ class StereoCam:
         self.imgCounter += 1
 
     
-    def camPreview(self):
+    def camPreview_Internal(self):
         """Preview the camera outputs"""
         if self.checkOpen():
-            self.grabFrame()
-            retVal = self.retrieveFrame()
+            retVal = self.getFrames()
 
             while retVal:
                 if ((time.time()-self.previousTime)>=self.frameTime):
                     self.previousTime = time.time()
 
-                    self.grabFrame()
-                    retVal = self.retrieveFrame()
+                    retVal = self.getFrames()
 
                     cv2.imshow('Left', self.leftImg)
                     cv2.imshow('Right', self.rightImg)
@@ -93,6 +96,11 @@ class StereoCam:
             
         else:
             print('Could not initialize camera pair')
+
+    
+    def camPreview(self):
+        previewThread = threading.Thread(target=self.camPreview_Internal)
+        previewThread.start()
 
 
     def loadCalibration(self, path="data/calibration.json"):
@@ -116,7 +124,63 @@ class StereoCam:
         except:
             print("Could not load calibration")
 
+    
+    def previewDisparity(self):
+        self.createStereoSGBM()
+        self.createStereoBM()
+
+        if self.checkOpen():
+            retVal = self.getFrames()
+
+            while retVal:
+                if ((time.time()-self.previousTime)>=self.frameTime):
+                    self.previousTime = time.time()
+
+                    retVal = self.getFrames()
+
+                    self.computeDisparity()
+                    cv2.imshow("Disparity", self.leftDisparityImg)
+
+                    key = cv2.waitKey(20)
+                    if key == 27: # Exit on ESC
+                        break
+                    if key == 32: # Capture on SPACE
+                        self.captureImages()
+
+            cv2.destroyAllWindows()
+            
+        else:
+            print('Could not initialize camera pair')
+
+    
+    def createStereoSGBM(self):
+        self.leftMatcherSGBM = cv2.StereoSGBM_create(
+            minDisparity=self.minDisparity,
+            numDisparities=self.numDisparities,
+            blockSize=self.blockSize,
+            P1=8 * 3 * self.windowSize ** 2,
+            P2=32 * 3 * self.windowSize ** 2,
+            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
+        )
+    
+
+    def createStereoBM(self):
+        self.leftMatcherBM = cv2.StereoBM_create(
+            numDisparities=self.numDisparities,
+            blockSize=self.blockSize
+        )
+
+    
+    def computeDisparity(self):
+        self.leftImgGray = cv2.cvtColor(self.leftImg, cv2.COLOR_BGR2GRAY)
+        self.rightImgGray = cv2.cvtColor(self.rightImg, cv2.COLOR_BGR2GRAY)
+
+        # Compute the left disparity map
+        self.leftDisparityImg = self.leftMatcherBM.compute(self.leftImgGray, self.rightImgGray).astype(np.float32)/16
+
+
 
 if __name__=="__main__":
     Stereo = StereoCam(leftID=0, rightID=2, width=1280, height=720, fps=2)
-    Stereo.camPreview()
+    #Stereo.camPreview()
+    Stereo.previewDisparity()
