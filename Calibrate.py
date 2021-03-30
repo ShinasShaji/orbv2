@@ -7,7 +7,7 @@ import numpy as np
 
 class Calibrate:
     """Class for camera calibration"""
-    def __init__(self, chessBoardSize, squareSize, path = "captures/calibrate/*.png"):
+    def __init__(self, chessBoardSize, squareSize, leftCam = True, path = "captures/calibrate/*.png"):
         self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.chessBoardSize = chessBoardSize
         self.squareSize = squareSize # mm
@@ -24,8 +24,9 @@ class Calibrate:
         # Pull up checkerboard images
         self.images = glob.glob(path)
 
-        # Flag
+        # Flags
         self.calibrated = False
+        self.leftCam = leftCam
 
 
     def findCorners(self):
@@ -79,12 +80,12 @@ class Calibrate:
             print("Not calibrated yet")
 
 
-    def exportResults(self, path="data/calibration.json", leftCam=True):
+    def exportResults(self, path="data/calibration.json"):
         """Export results as json for later retrieval"""
         results = {"cameraMatrix" : self.cameraMatrix.tolist(), \
                    "distortionCoefficients" : self.distortionCoeffs.tolist()}
 
-        if leftCam:
+        if self.leftCam:
             path = "".join([path.replace(".json", ""), "_left.json"])
         else:
             path = "".join([path.replace(".json", ""), "_right.json"])

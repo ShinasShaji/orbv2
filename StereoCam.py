@@ -101,16 +101,15 @@ class StereoCam:
                 "right":"".join([path.replace(".json", ""), "_right.json"])}
 
         try:
+            self.cameraMatrix = {}
+            self.distortionMatrix = {}
+
             for camera in ["left", "right"]:
                 with open(path[camera], "r") as matrixJson:
                     calibrationDict = json.load(matrixJson)
 
-                    if camera=="left":
-                        self.leftCameraMatrix = np.array(calibrationDict["cameraMatrix"])
-                        self.leftDistortionMatrix = np.array(calibrationDict["distortionCoefficients"])
-                    elif camera=="right":
-                        self.rightCameraMatrix = np.array(calibrationDict["cameraMatrix"])
-                        self.rightDistortionMatrix = np.array(calibrationDict["distortionCoefficients"])
+                    self.cameraMatrix[camera] = np.array(calibrationDict["cameraMatrix"])
+                    self.distortionMatrix[camera] = np.array(calibrationDict["distortionCoefficients"])
 
             print("Calibration loaded")
 
