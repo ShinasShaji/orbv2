@@ -13,13 +13,8 @@ class Calibrate:
         self.squareSize = squareSize # mm
 
         # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0), multiplied by square size
-<<<<<<< HEAD
-        self.objectPointPrep = np.zeros((1, self.chessBoardSize[0]*self.chessBoardSize[1], 3), np.float32)
-        self.objectPointPrep[0, :, :2] = \
-=======
         self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
         self.objectPointPrep[:,:2] = \
->>>>>>> 88f01cae51949c0972fd5bee6cc1bbe256ef50b2
             np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
 
         # Arrays to store object points and image points from all images
@@ -43,12 +38,7 @@ class Calibrate:
             self.grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
             # Find the chess board corners
-<<<<<<< HEAD
-            retVal, corners = cv2.findChessboardCorners(self.grayImage, self.chessBoardSize, \
-                    cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
-=======
             retVal, corners = cv2.findChessboardCorners(self.grayImage, self.chessBoardSize, None)
->>>>>>> 88f01cae51949c0972fd5bee6cc1bbe256ef50b2
 
             # If found, add object points, image points (after refining them)
             if retVal == True:
@@ -112,19 +102,7 @@ class Calibrate:
             for fileName in self.images:
                 image = cv2.imread(fileName)
 
-<<<<<<< HEAD
-                # Refine camera matrix based on free scaling parameter alpha
-                w, h = image.shape[:2]
-                newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(self.cameraMatrix, self.distortionCoeffs, (w,h), 1, (w,h))
-
-                undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs, None, newCameraMatrix)
-
-                # Crop the image based on region of interest (roi)
-                x, y, w, h = roi
-                undistortedImage = undistortedImage[y:y+h, x:x+w]
-=======
                 undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs)
->>>>>>> 88f01cae51949c0972fd5bee6cc1bbe256ef50b2
 
                 cv2.imshow('UndistortedImage', undistortedImage)
                 cv2.waitKey(500)
