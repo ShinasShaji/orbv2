@@ -95,3 +95,24 @@ class Calibrate:
         resultJson.close()
 
         print("Exported as", path)
+        
+
+    def undistortImages(self):
+        if self.calibrated:
+            for fileName in self.images:
+                image = cv2.imread(fileName)
+
+                undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs)
+
+                cv2.imshow('UndistortedImage', undistortedImage)
+                cv2.waitKey(500)
+
+            cv2.destroyAllWindows()
+        
+        else:
+            print("Camera hasn't been calibrated yet")
+
+
+
+if __name__=="__main__":
+    print("Run using calibrateCamera.ipynb")

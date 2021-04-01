@@ -139,7 +139,7 @@ class StereoCam:
                     retVal = self.getFrames()
 
                     self.computeDisparity()
-                    cv2.imshow("Disparity", self.leftDisparityImg)
+                    cv2.imshow("leftDisparity", self.leftDisparityImg)
 
                     key = cv2.waitKey(20)
                     if key == 27: # Exit on ESC
