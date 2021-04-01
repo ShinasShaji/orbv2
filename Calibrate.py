@@ -102,7 +102,7 @@ class Calibrate:
             for fileName in self.images:
                 image = cv2.imread(fileName)
 
-                undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs)
+                undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs, None, self.cameraMatrix)
 
                 cv2.imshow('UndistortedImage', undistortedImage)
                 cv2.waitKey(500)
@@ -111,6 +111,17 @@ class Calibrate:
         
         else:
             print("Camera hasn't been calibrated yet")
+
+
+    def findReprojectionError(self):
+        mean_error = 0
+        for i in range(len(self.objectPoints)):
+            imgpoints2, _ = cv2.projectPoints(self.objectPoints[i], \
+                self.rotationVecs[i], self.translationVecs[i], self.cameraMatrix, \
+                self.distortionCoeffs)
+            error = cv2.norm(self.imagePoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+            mean_error += error
+        print( "Total error: {}".format(mean_error/len(self.objectPoints)) )
 
 
 
