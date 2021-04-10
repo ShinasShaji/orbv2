@@ -182,5 +182,5 @@ class StereoCam:
 
 if __name__=="__main__":
     Stereo = StereoCam(leftID=0, rightID=2, width=1280, height=720, fps=2)
-    #Stereo.camPreview()
-    Stereo.previewDisparity()
+    Stereo.camPreview()
+    #Stereo.previewDisparity()
