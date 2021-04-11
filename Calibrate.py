@@ -1,5 +1,7 @@
 import glob
 import json
+import os
+import fnmatch
 
 import cv2
 import numpy as np
@@ -7,8 +9,12 @@ import numpy as np
 
 class Calibrate:
     """Class for camera calibration"""
-    def __init__(self, chessBoardSize, squareSize, leftCam = True, path = "captures/calibrate/*.png"):
+    def __init__(self, chessBoardSize, squareSize, leftCam = True, path = "captures/calibrate"):
+        # Termination criteria for distortion calibration
         self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        self.stereoCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+        # Chessboard properties
         self.chessBoardSize = chessBoardSize
         self.squareSize = squareSize # mm
 
@@ -19,10 +25,12 @@ class Calibrate:
 
         # Arrays to store object points and image points from all images
         self.objectPoints = [] # 3D point in real world space
-        self.imagePoints = [] # 2D points in image plane
+        self.imagePointsL = [] # 2D points in image plane, left
+        self.imagePointsR = [] # right
 
         # Pull up checkerboard images
-        self.images = glob.glob(path)
+        self.path = path
+        self.images = glob.glob(self.path)
 
         # Flags
         self.calibrated = False
@@ -33,22 +41,45 @@ class Calibrate:
         """Find chessboard corners on images from folder"""
         self.calibrated = False
 
-        for fileName in self.images:
-            image = cv2.imread(fileName)
-            self.grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Counting number of images in directory
+        # Ensure that only required and matching images are stored here
+        imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
+        print("".join(["Found ", str(imageCount), " images in folder"]))
 
-            # Find the chess board corners
-            retVal, corners = cv2.findChessboardCorners(self.grayImage, self.chessBoardSize, None)
+        for count in range(imageCount/2):
+            # Crafting filenames to read images
+            fileNameL = "".join(["left_", str(count), ".png"])
+            fileNameR = "".join(["right_", str(count), ".png"])
+
+            # Reading left and right images
+            imageL = cv2.imread(fileNameL)
+            imageR = cv2.imread(fileNameR)
+
+            # Converting to grayscale
+            self.grayImageL = cv2.cvtColor(imageL, cv2.COLOR_BGR2GRAY)
+            self.grayImageR = cv2.cvtColor(imageR, cv2.COLOR_BGR2GRAY)
+
+            # Finding chess board corners
+            retValL, cornersL = cv2.findChessboardCorners(self.grayImageL, self.chessBoardSize, None)
+            retValR, cornersR = cv2.findChessboardCorners(self.grayImageR, self.chessBoardSize, None)
 
             # If found, add object points, image points (after refining them)
-            if retVal == True:
+            if retValL and retValR:
                 self.objectPoints.append(self.objectPointPrep)
-                subPixCorners = cv2.cornerSubPix(self.grayImage, corners, (11,11), (-1,-1), self.cornerSubPixCriteria)
-                self.imagePoints.append(subPixCorners)
+
+                cornersL = cv2.cornerSubPix(self.grayImageL, cornersL, (11,11), (-1,-1), self.cornerSubPixCriteria)
+                cornersR = cv2.cornerSubPix(self.grayImageR, cornersR, (11,11), (-1,-1), self.cornerSubPixCriteria)
+                
+                self.imagePointsL.append(cornersL)
+                self.imagePointsR.append(cornersR)
 
                 # Draw and display the corners
-                cv2.drawChessboardCorners(image, self.chessBoardSize, subPixCorners, retVal)
-                cv2.imshow('Chessboard', image)
+                cv2.drawChessboardCorners(imageL, self.chessBoardSize, cornersL, retValL)
+                cv2.drawChessboardCorners(imageR, self.chessBoardSize, cornersR, retValR)
+
+                cv2.imshow('Chessboard_Left', imageL)
+                cv2.imshow('Chessboard_Right', imageR)
+
                 cv2.waitKey(500)
 
         cv2.destroyAllWindows()

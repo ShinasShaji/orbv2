@@ -74,6 +74,7 @@ class StereoCam:
     
     def camPreview_Internal(self):
         """Preview the camera outputs"""
+        print("Initializing cameras for preview")
         if self.checkOpen():
             retVal = self.getFrames()
 
@@ -109,15 +110,16 @@ class StereoCam:
                 "right":"".join([path.replace(".json", ""), "_right.json"])}
 
         try:
-            self.cameraMatrix = {}
-            self.distortionMatrix = {}
+            # Index 0 is left, 1 is right
+            self.cameraMatrix = []
+            self.distortionMatrix = []
 
             for camera in ["left", "right"]:
                 with open(path[camera], "r") as matrixJson:
                     calibrationDict = json.load(matrixJson)
 
-                    self.cameraMatrix[camera] = np.array(calibrationDict["cameraMatrix"])
-                    self.distortionMatrix[camera] = np.array(calibrationDict["distortionCoefficients"])
+                    self.cameraMatrix.append(np.array(calibrationDict["cameraMatrix"]))
+                    self.distortionMatrix.append(np.array(calibrationDict["distortionCoefficients"]))
 
             print("Calibration loaded")
 
@@ -181,6 +183,7 @@ class StereoCam:
 
 
 if __name__=="__main__":
-    Stereo = StereoCam(leftID=0, rightID=2, width=1280, height=720, fps=2)
+    Stereo = StereoCam(leftID=2, rightID=0, width=1280, height=720, fps=2)
+    Stereo.loadCalibration()
     Stereo.camPreview()
     #Stereo.previewDisparity()
