@@ -30,7 +30,9 @@ class Calibrate:
 
         # Pull up checkerboard images
         self.path = path
-        self.images = glob.glob(self.path)
+        imageFormat = ".png"
+        self.imagesL = sorted(glob.glob("".join([self.path, "/left_*", imageFormat])))
+        self.imagesR = sorted(glob.glob("".join([self.path, "/right_", imageFormat])))
 
         # Flags
         self.calibrated = False
@@ -46,11 +48,7 @@ class Calibrate:
         imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
         print("".join(["Found ", str(imageCount), " images in folder"]))
 
-        for count in range(imageCount/2):
-            # Crafting filenames to read images
-            fileNameL = "".join(["left_", str(count), ".png"])
-            fileNameR = "".join(["right_", str(count), ".png"])
-
+        for (fileNameL, fileNameR) in (self.imagesL, self.imagesR):
             # Reading left and right images
             imageL = cv2.imread(fileNameL)
             imageR = cv2.imread(fileNameR)
@@ -87,10 +85,34 @@ class Calibrate:
 
     def calibrate(self):
         """Calculate camera matrix, distortion coefficients and rotation and translation vectors"""
-        retVal, self.cameraMatrix, self.distortionCoeffs, self.rotationVecs, self.translationVecs = \
-            cv2.calibrateCamera(self.objectPoints, self.imagePoints, self.grayImage.shape[::-1], None, None)
+        # Finding camera matrices, distortion coefficients, rotation and
+        # translation vectors
+        # Left
+        retValL, self.cameraMatrixL, self.distortionCoeffsL, \
+            self.rotationVecsL, self.translationVecsL = \
+            cv2.calibrateCamera(self.objectPoints, self.imagePointsL, \
+                self.grayImageL.shape[::-1], None, None)
+        # Right
+        retValR, self.cameraMatrixR, self.distortionCoeffsR, \
+            self.rotationVecsR, self.translationVecsR = \
+            cv2.calibrateCamera(self.objectPoints, self.imagePointsR, \
+                self.grayImageR.shape[::-1], None, None)
 
-        if retVal:
+        # Finding optimal camera matrices and regions of interest
+        # Left
+        heightL, widthL = self.grayImageL.shape[:2]
+        self.optimalCameraMatrixL, self.roiL = \
+            cv2.getOptimalNewCameraMatrix(self.cameraMatrixL,\
+                self.distortionCoeffsL, (widthL, heightL), 1,\
+                (widthL, heightL))
+        # Right
+        heightR, widthR = self.grayImageR.shape[:2]
+        self.optimalCameraMatrixR, self.roiR = \
+            cv2.getOptimalNewCameraMatrix(self.cameraMatrixR,\
+                self.distortionCoeffsR, (widthR, heightR), 1,\
+                (widthR, heightR))
+
+        if retValL and retValR:
             self.calibrated = True
             print("Calibration complete")
 
@@ -98,23 +120,43 @@ class Calibrate:
             self.calibrated = False
             print("Calibration failed")
 
-            
+    
+    def stereoCalibrate():
+        """Calibrate camera pair with respect to each other"""
+        # Flags for calibration
+        # Uncomment flags to use
+        flags = 0
+        flags |= cv2.CALIB_FIX_INTRINSIC
+        #flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
+        #flags |= cv2.CALIB_USE_INTRINSIC_GUESS
+        #flags |= cv2.CALIB_FIX_FOCAL_LENGTH
+        #flags |= cv2.CALIB_FIX_ASPECT_RATIO
+        #flags |= cv2.CALIB_ZERO_TANGENT_DIST
+        #flags |= cv2.CALIB_RATIONAL_MODEL
+        #flags |= cv2.CALIB_SAME_FOCAL_LENGTH
+        #flags |= cv2.CALIB_FIX_K3
+        #flags |= cv2.CALIB_FIX_K4
+        #flags |= cv2.CALIB_FIX_K5
+
+
+### To do: Modify everything below to accomodate two cameras ###
+
     def printResults(self):
         """Print calibration results"""
         if self.calibrated:
             with np.printoptions(precision=3, suppress=True):
-                print("Camera matrix:\n", self.cameraMatrix, "\n")
-                print("Distortion coefficients:\n", self.distortionCoeffs, "\n")
-                print("Rotation vectors:\n", self.rotationVecs, "\n")
-                print("Translation vectors:\n", self.translationVecs, "\n")
+                print("Camera matrix:\n", self.cameraMatrixL, "\n")
+                print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
+                print("Rotation vectors:\n", self.rotationVecsL, "\n")
+                print("Translation vectors:\n", self.translationVecsL, "\n")
         else:
             print("Not calibrated yet")
 
 
     def exportResults(self, path="data/calibration.json"):
         """Export results as json for later retrieval"""
-        results = {"cameraMatrix" : self.cameraMatrix.tolist(), \
-                   "distortionCoefficients" : self.distortionCoeffs.tolist()}
+        results = {"cameraMatrix" : self.cameraMatrixL.tolist(), \
+                   "distortionCoefficients" : self.distortionCoeffsL.tolist()}
 
         if self.leftCam:
             path = "".join([path.replace(".json", ""), "_left.json"])
@@ -147,10 +189,10 @@ class Calibrate:
     def findReprojectionError(self):
         mean_error = 0
         for i in range(len(self.objectPoints)):
-            imgpoints2, _ = cv2.projectPoints(self.objectPoints[i], \
-                self.rotationVecs[i], self.translationVecs[i], self.cameraMatrix, \
-                self.distortionCoeffs)
-            error = cv2.norm(self.imagePoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+            imgpoints2L, _ = cv2.projectPoints(self.objectPoints[i], \
+                self.rotationVecsL[i], self.translationVecsL[i], \
+                self.cameraMatrixL, self.distortionCoeffsL)
+            error = cv2.norm(self.imagePointsL[i], imgpoints2L, cv2.NORM_L2)/len(imgpoints2L)
             mean_error += error
         print( "Total error: {}".format(mean_error/len(self.objectPoints)) )
 
