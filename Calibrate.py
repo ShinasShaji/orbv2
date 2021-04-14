@@ -33,7 +33,7 @@ class Calibrate:
         self.stereoCalibrated = False
 
         # StereoRectify
-        self.rectifyScale = 1 # 1 to crop image; 0 to leave uncropped
+        self.rectifyScale = 1 # alpha; 1 to crop image; 0 to leave uncropped
 
         # Camera properties
         self.apertureSize = (3.84, 2.16) # (width, height) in mm
@@ -147,7 +147,6 @@ class Calibrate:
 
     def stereoCalibrate(self):
         """Calibrate camera pair with respect to each other"""
-
         if not self.isMonoCalibrated():
             pass
 
@@ -176,7 +175,8 @@ class Calibrate:
                 self.imagePointsL, self.imagePointsR, \
                 self.cameraMatrixL, self.distortionCoeffsL, \
                 self.cameraMatrixR, self.distortionCoeffsR, \
-                self.grayImageL.shape[::-1], self.stereoCriteria, flags)
+                self.grayImageL.shape[::-1], criteria=self.stereoCriteria, \
+                flags=flags)
 
         if retValStereo:
             self.stereoCalibrated = True
@@ -187,15 +187,24 @@ class Calibrate:
             print("Stereo calibration failed")
 
     
-    def stereoRectifyUndistort(self):
+    def stereoRectify(self):
+        """Computes rotation (3x3) and projection matrices (3x4) for each 
+        camera, the Q matrix, and valid regions of interest. The Q matrix 
+        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
+        in the rectified coordinate frame."""
 
-        pass
+        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
+        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
+            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
+                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
+                newImageSize=(0,0))
 
 
     def exportCameraProperties(self, path="data/cameraProperties.json"):
         """Computes various useful camera characteristics from the previously 
         estimated camera matrix"""
-
         if not self.isMonoCalibrated():
             pass
 
@@ -238,7 +247,6 @@ class Calibrate:
 
     def printResults(self):
         """Print mono calibration results"""
-        
         if not self.isMonoCalibrated():
             pass
 
@@ -258,7 +266,6 @@ class Calibrate:
 
     def exportMonoCalibrationResults(self, path="data/monoCalibration.json"):
         """Export results of mono calibration as a json"""
-
         if not self.isMonoCalibrated():
             pass
 
@@ -312,14 +319,14 @@ class Calibrate:
         error = [0, 0]
         for i in range(len(self.objectPoints)):
             # Left
-            imgpoints2L, _ = cv2.projectPoints(self.objectPoints[i], \
+            imgpoints2L, jacobianL = cv2.projectPoints(self.objectPoints[i], \
                 self.rotationVecsL[i], self.translationVecsL[i], \
                 self.cameraMatrixL, self.distortionCoeffsL)
             error[0] = cv2.norm(self.imagePointsL[i], imgpoints2L, \
                      cv2.NORM_L2)/len(imgpoints2L)
             meanError[0] += error[0]
 
-            imgpoints2R, _ = cv2.projectPoints(self.objectPoints[i], \
+            imgpoints2R, jacobianR = cv2.projectPoints(self.objectPoints[i], \
                 self.rotationVecsR[i], self.translationVecsR[i], \
                 self.cameraMatrixR, self.distortionCoeffsR)
             error[1] = cv2.norm(self.imagePointsR[i], imgpoints2R, \
