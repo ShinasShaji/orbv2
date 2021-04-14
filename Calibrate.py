@@ -45,7 +45,7 @@ class Calibrate:
         self.imageFormat = imageFormat
         self.path = path
         self.imageGlobL = sorted(glob.glob("".join([self.path, "/left_*", self.imageFormat])))
-        self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_", self.imageFormat])))
+        self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_*", self.imageFormat])))
 
 
     def findCorners(self):
