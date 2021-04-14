@@ -31,19 +31,13 @@ class StereoCam:
         self.imgCounter = 0
         self.capturePath = "captures/" 
 
-        # Disparity
-        self.numDisparities = 6*16
-        self.blockSize = 11
-    
-        self.minDisparity = 0
-        self.windowSize = 6
-
 
     def checkOpen(self):
         """Check if cameras have initialized"""
         if self.leftCam.isOpened() and self.rightCam.isOpened():
             return True
         else:
+            print('Could not initialize camera pair')
             return False
 
 
@@ -73,117 +67,55 @@ class StereoCam:
 
     
     def camPreview_Internal(self):
-        """Preview the camera outputs"""
+        """Preview camera outputs"""
         print("Initializing cameras for preview")
-        if self.checkOpen():
-            retVal = self.getFrames()
+        if not self.checkOpen():
+            pass
 
-            while retVal:
-                if ((time.time()-self.previousTime)>=self.frameTime):
-                    self.previousTime = time.time()
+        retVal = self.getFrames()
 
-                    retVal = self.getFrames()
+        while retVal:
+            if ((time.time()-self.previousTime)>=self.frameTime):
+                self.previousTime = time.time()
 
-                    cv2.imshow('Left', self.leftImg)
-                    cv2.imshow('Right', self.rightImg)
+                retVal = self.getFrames()
 
-                    key = cv2.waitKey(20)
-                    if key == 27: # Exit on ESC
-                        break
-                    if key == 32: # Capture on SPACE
-                        self.captureImages()
+                cv2.imshow('Left', self.leftImg)
+                cv2.imshow('Right', self.rightImg)
 
-            cv2.destroyAllWindows()
-            
-        else:
-            print('Could not initialize camera pair')
+                key = cv2.waitKey(20)
+                if key == 27: # Exit on ESC
+                    break
+                if key == 32: # Capture on SPACE
+                    self.captureImages()
+
+        cv2.destroyAllWindows()
 
     
     def camPreview(self):
+        """Preview camera outputs. Runs as a thread"""
         previewThread = threading.Thread(target=self.camPreview_Internal)
         previewThread.start()
 
 
-    def loadCalibration(self, path="data/calibration.json"):
-        """Load calibration matrices from jsons"""
-        path = {"left":"".join([path.replace(".json", ""), "_left.json"]), \
-                "right":"".join([path.replace(".json", ""), "_right.json"])}
+### To do: Load stereo calibration data and matrices from jsons ###
 
-        try:
-            # Index 0 is left, 1 is right
-            self.cameraMatrix = []
-            self.distortionMatrix = []
 
-            for camera in ["left", "right"]:
-                with open(path[camera], "r") as matrixJson:
-                    calibrationDict = json.load(matrixJson)
-
-                    self.cameraMatrix.append(np.array(calibrationDict["cameraMatrix"]))
-                    self.distortionMatrix.append(np.array(calibrationDict["distortionCoefficients"]))
-
-            print("Calibration loaded")
-
-        except:
-            print("Could not load calibration")
-
-    
-    def previewDisparity(self):
-        self.createStereoSGBM()
-        self.createStereoBM()
-
-        if self.checkOpen():
-            retVal = self.getFrames()
-
-            while retVal:
-                if ((time.time()-self.previousTime)>=self.frameTime):
-                    self.previousTime = time.time()
-
-                    retVal = self.getFrames()
-
-                    self.computeDisparity()
-                    cv2.imshow("leftDisparity", self.leftDisparityImg)
-
-                    key = cv2.waitKey(20)
-                    if key == 27: # Exit on ESC
-                        break
-                    if key == 32: # Capture on SPACE
-                        self.captureImages()
-
-            cv2.destroyAllWindows()
-            
-        else:
-            print('Could not initialize camera pair')
-
-    
-    def createStereoSGBM(self):
-        self.leftMatcherSGBM = cv2.StereoSGBM_create(
-            minDisparity=self.minDisparity,
-            numDisparities=self.numDisparities,
-            blockSize=self.blockSize,
-            P1=8 * 3 * self.windowSize ** 2,
-            P2=32 * 3 * self.windowSize ** 2,
-            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
-        )
-    
-
-    def createStereoBM(self):
-        self.leftMatcherBM = cv2.StereoBM_create(
-            numDisparities=self.numDisparities,
-            blockSize=self.blockSize
-        )
-
-    
-    def computeDisparity(self):
-        self.leftImgGray = cv2.cvtColor(self.leftImg, cv2.COLOR_BGR2GRAY)
-        self.rightImgGray = cv2.cvtColor(self.rightImg, cv2.COLOR_BGR2GRAY)
-
-        # Compute the left disparity map
-        self.leftDisparityImg = self.leftMatcherBM.compute(self.leftImgGray, self.rightImgGray).astype(np.float32)/16
+    def stereoRectify(self):
+        """Computes rotation (3x3) and projection matrices (3x4) for each 
+        camera, the Q matrix, and valid regions of interest. The Q matrix 
+        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
+        in the rectified coordinate frame."""
+        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
+        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
+            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
+                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
+                newImageSize=(0,0))
 
 
 
 if __name__=="__main__":
     Stereo = StereoCam(leftID=2, rightID=0, width=1280, height=720, fps=2)
-    Stereo.loadCalibration()
     Stereo.camPreview()
-    #Stereo.previewDisparity()

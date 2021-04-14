@@ -21,7 +21,8 @@ class Calibrate:
         # Preparing object points like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0), multiplied by square size
         self.objectPointPrep = np.zeros((self.chessBoardSize[0]*self.chessBoardSize[1],3), np.float32)
         self.objectPointPrep[:,:2] = \
-            np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), self.squareSize)
+            np.multiply(np.mgrid[0:self.chessBoardSize[0],0:self.chessBoardSize[1]].T.reshape(-1,2), \
+                self.squareSize)
 
         # Arrays to store object points and image points from all images
         self.objectPoints = [] # 3D point in real world space
@@ -322,20 +323,42 @@ class Calibrate:
             self.stereoCalibrated = False
             print("Stereo calibration failed")
 
-    
-    def stereoRectify(self):
-        """Computes rotation (3x3) and projection matrices (3x4) for each 
-        camera, the Q matrix, and valid regions of interest. The Q matrix 
-        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
-        in the rectified coordinate frame."""
-        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
-        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
-            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
-                self.cameraMatrixR, self.distortionCoeffsR, \
-                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
-                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
-                newImageSize=(0,0))
+        
+    def isStereoCalibrated(self):
+        """Check if stereo calibration has been done"""
+        if self.stereoCalibrated:
+            return True
+        else:
+            print("Not stereo calibrated yet")
+            return False
 
+    
+    def exportStereoCalibrationResults(self, path="data/stereoCalibration.json"):
+        """Export results of stereo calibration as a json"""
+        if not self.isStereoCalibrated():
+            pass
+
+        # Crafting dictionary to hold results
+        results = {
+            "left":{    
+                "cameraMatrix":self.cameraMatrixL.tolist(),
+                "distortionCoefficients":self.distortionCoeffsL.tolist()
+            },
+            "right":{
+                "cameraMatrix":self.cameraMatrixR.tolist(),
+                "distortionCoefficients":self.distortionCoeffsR.tolist()
+            },
+            "stereoRotationMatrix":self.stereoRotationMatrix.tolist(),
+            "stereoTranslationMatrix":self.stereoTranslationMatrix.tolist(),
+            "essentialMatrix":self.essentialMatrix.tolist(), 
+            "fundamentalMatrix":self.fundamentalMatrix.tolist(),
+            "imageSizeL":self.grayImageL.shape[::-1],
+            "imageSizeR":self.grayImageR.shape[::-1],
+            "alpha":self.rectifyScale
+        }
+
+        self.dictToJson(results, path)
+        
 
 
 if __name__=="__main__":
