@@ -36,6 +36,7 @@ class Calibrate:
 
         # Flags
         self.calibrated = False
+        self.stereoCalibrated = False
         self.leftCam = leftCam
 
 
@@ -121,10 +122,10 @@ class Calibrate:
             print("Calibration failed")
 
     
-    def stereoCalibrate():
+    def stereoCalibrate(self):
         """Calibrate camera pair with respect to each other"""
         # Flags for calibration
-        # Uncomment flags to use
+        # Uncomment to enable flags
         flags = 0
         flags |= cv2.CALIB_FIX_INTRINSIC
         #flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
@@ -137,6 +138,27 @@ class Calibrate:
         #flags |= cv2.CALIB_FIX_K3
         #flags |= cv2.CALIB_FIX_K4
         #flags |= cv2.CALIB_FIX_K5
+
+        # Intrinsic camara matrixes fixed; only Rotation, Translation
+        # Essential, and Fundamental matrices are calculated
+
+        retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
+        self.cameraMatrixR, self.distortionCoeffsR, \
+        self.stereoRotationMatrix, self.stereoTranslationMatrix, \
+        self.essentialMatrix, self.fundamentalMatrix = \
+            cv2.stereoCalibrate(self.objectPoints, \
+                self.imagePointsL, self.imagePointsR, \
+                self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], self.stereoCriteria, flags)
+
+        if retValStereo:
+            self.stereoCalibrated = True
+            print("Stereo calibration complete")
+        
+        else:
+            self.stereoCalibrated = False
+            print("Stereo calibration failed")
 
 
 ### To do: Modify everything below to accomodate two cameras ###
