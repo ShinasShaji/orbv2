@@ -9,7 +9,7 @@ import numpy as np
 
 class Calibrate:
     """Class for camera calibration"""
-    def __init__(self, chessBoardSize, squareSize, leftCam = True, path = "captures/calibrate"):
+    def __init__(self, chessBoardSize, squareSize):
         # Termination criteria for distortion calibration
         self.cornerSubPixCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.stereoCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -26,30 +26,37 @@ class Calibrate:
         # Arrays to store object points and image points from all images
         self.objectPoints = [] # 3D point in real world space
         self.imagePointsL = [] # 2D points in image plane, left
-        self.imagePointsR = [] # right
-
-        # Pull up checkerboard images
-        self.path = path
-        imageFormat = ".png"
-        self.imagesL = sorted(glob.glob("".join([self.path, "/left_*", imageFormat])))
-        self.imagesR = sorted(glob.glob("".join([self.path, "/right_", imageFormat])))
+        self.imagePointsR = [] # right        
 
         # Flags
-        self.calibrated = False
+        self.monoCalibrated = False
         self.stereoCalibrated = False
-        self.leftCam = leftCam
+
+        # StereoRectify
+        self.rectifyScale = 1 # 1 to crop image; 0 to leave uncropped
+
+        # Camera properties
+        self.apertureSize = (3.84, 2.16) # (width, height) in mm
+
+
+    def loadImagesForCalibration(self, imageFormat=".png", path="captures/calibrate"):
+        """Loads images of specified format from path for calibration"""
+        self.imageFormat = imageFormat
+        self.path = path
+        self.imageGlobL = sorted(glob.glob("".join([self.path, "/left_*", self.imageFormat])))
+        self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_", self.imageFormat])))
 
 
     def findCorners(self):
         """Find chessboard corners on images from folder"""
-        self.calibrated = False
+        self.monoCalibrated = False
 
         # Counting number of images in directory
         # Ensure that only required and matching images are stored here
         imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
         print("".join(["Found ", str(imageCount), " images in folder"]))
 
-        for (fileNameL, fileNameR) in (self.imagesL, self.imagesR):
+        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
             # Reading left and right images
             imageL = cv2.imread(fileNameL)
             imageR = cv2.imread(fileNameR)
@@ -84,10 +91,9 @@ class Calibrate:
         cv2.destroyAllWindows()
         
 
-    def calibrate(self):
-        """Calculate camera matrix, distortion coefficients and rotation and translation vectors"""
-        # Finding camera matrices, distortion coefficients, rotation and
-        # translation vectors
+    def monoCalibrate(self):
+        """Calculate camera matrix, distortion coefficients and rotation and 
+        translation vectors"""
         # Left
         retValL, self.cameraMatrixL, self.distortionCoeffsL, \
             self.rotationVecsL, self.translationVecsL = \
@@ -101,31 +107,51 @@ class Calibrate:
 
         # Finding optimal camera matrices and regions of interest
         # Left
-        heightL, widthL = self.grayImageL.shape[:2]
+        self.heightL, self.widthL = self.grayImageL.shape[:2]
         self.optimalCameraMatrixL, self.roiL = \
             cv2.getOptimalNewCameraMatrix(self.cameraMatrixL,\
-                self.distortionCoeffsL, (widthL, heightL), 1,\
-                (widthL, heightL))
+                self.distortionCoeffsL, (self.widthL, self.heightL), 1,\
+                (self.widthL, self.heightL))
         # Right
-        heightR, widthR = self.grayImageR.shape[:2]
+        self.heightR, self.widthR = self.grayImageR.shape[:2]
         self.optimalCameraMatrixR, self.roiR = \
             cv2.getOptimalNewCameraMatrix(self.cameraMatrixR,\
-                self.distortionCoeffsR, (widthR, heightR), 1,\
-                (widthR, heightR))
+                self.distortionCoeffsR, (self.widthR, self.heightR), 1,\
+                (self.widthR, self.heightR))
 
         if retValL and retValR:
-            self.calibrated = True
+            self.monoCalibrated = True
             print("Calibration complete")
 
         else:
-            self.calibrated = False
+            self.monoCalibrated = False
             print("Calibration failed")
 
     
+    def isMonoCalibrated(self):
+        """Check if mono calibration has been done"""
+        if self.monoCalibrated:
+            return True
+        else:
+            print("Not mono calibrated yet")
+            return False
+
+    
+    def dictToJson(dict, path):
+        """Exports given dictionary as a .json file"""
+        with open(path, "w") as jsonFile:
+            json.dump(dict, jsonFile, sort_keys=True, indent=4)
+        
+        print("Exported as ", path)
+
+
     def stereoCalibrate(self):
         """Calibrate camera pair with respect to each other"""
-        # Flags for calibration
-        # Uncomment to enable flags
+
+        if not self.isMonoCalibrated():
+            pass
+
+        # Flags for calibration; uncomment to enable
         flags = 0
         flags |= cv2.CALIB_FIX_INTRINSIC
         #flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
@@ -139,7 +165,7 @@ class Calibrate:
         #flags |= cv2.CALIB_FIX_K4
         #flags |= cv2.CALIB_FIX_K5
 
-        # Intrinsic camara matrixes fixed; only Rotation, Translation
+        # Intrinsic camara matrices are fixed; only Rotation, Translation
         # Essential, and Fundamental matrices are calculated
 
         retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
@@ -160,63 +186,148 @@ class Calibrate:
             self.stereoCalibrated = False
             print("Stereo calibration failed")
 
+    
+    def stereoRectifyUndistort(self):
 
-### To do: Modify everything below to accomodate two cameras ###
+        pass
+
+
+    def exportCameraProperties(self, path="data/cameraProperties.json"):
+        """Computes various useful camera characteristics from the previously 
+        estimated camera matrix"""
+
+        if not self.isMonoCalibrated():
+            pass
+
+        # Left
+        fovXL, fovYL, focalLengthL, principalPointL, aspectRatioL = \
+            cv2.calibrationMatrixValues(self.cameraMatrixL, \
+            (self.widthL, self.heightL), self.apertureSize[0], \
+            self.apertureSize[1])	
+
+        # Right
+        fovXR, fovYR, focalLengthR, principalPointR, aspectRatioR = \
+            cv2.calibrationMatrixValues(self.cameraMatrixR, \
+            (self.widthR, self.heightR), self.apertureSize[0], \
+            self.apertureSize[1])
+
+        # Crafting dictionary to hold results
+        results = {
+            "left":{
+                "fieldOfView":{
+                    "horizontal":fovXL, 
+                    "vertical":fovYL
+                    },
+                "focalLength":focalLengthL,
+                "principalPoint":principalPointL,
+                "aspectRatio":aspectRatioL
+            },
+            "right":{
+                "fieldOfView":{
+                    "horizontal":fovXR, 
+                    "vertical":fovYR
+                    },
+                "focalLength":focalLengthR,
+                "principalPoint":principalPointR,
+                "aspectRatio":aspectRatioR
+            },
+        }
+        
+        self.dictToJson(results, path)
+
 
     def printResults(self):
-        """Print calibration results"""
-        if self.calibrated:
-            with np.printoptions(precision=3, suppress=True):
-                print("Camera matrix:\n", self.cameraMatrixL, "\n")
-                print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
-                print("Rotation vectors:\n", self.rotationVecsL, "\n")
-                print("Translation vectors:\n", self.translationVecsL, "\n")
-        else:
-            print("Not calibrated yet")
+        """Print mono calibration results"""
+        
+        if not self.isMonoCalibrated():
+            pass
+
+        with np.printoptions(precision=3, suppress=True):
+            print("Left:\n\n")
+            print("Camera matrix:\n", self.cameraMatrixL, "\n")
+            print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
+            print("Rotation vectors:\n", self.rotationVecsL, "\n")
+            print("Translation vectors:\n", self.translationVecsL, "\n")
+
+            print("\n\nRight:\n\n")
+            print("Camera matrix:\n", self.cameraMatrixR, "\n")
+            print("Distortion coefficients:\n", self.distortionCoeffsR, "\n")
+            print("Rotation vectors:\n", self.rotationVecsR, "\n")
+            print("Translation vectors:\n", self.translationVecsR, "\n")
 
 
-    def exportResults(self, path="data/calibration.json"):
-        """Export results as json for later retrieval"""
-        results = {"cameraMatrix" : self.cameraMatrixL.tolist(), \
-                   "distortionCoefficients" : self.distortionCoeffsL.tolist()}
+    def exportMonoCalibrationResults(self, path="data/monoCalibration.json"):
+        """Export results of mono calibration as a json"""
 
-        if self.leftCam:
-            path = "".join([path.replace(".json", ""), "_left.json"])
-        else:
-            path = "".join([path.replace(".json", ""), "_right.json"])
+        if not self.isMonoCalibrated():
+            pass
 
-        resultJson = open(path, "w")
-        json.dump(results, resultJson, sort_keys=True, indent=4)
-        resultJson.close()
+        # Crafting dictionary to hold results
+        results = {
+            "left":{    
+                "cameraMatrix":self.cameraMatrixL.tolist(),
+                "distortionCoefficients":self.distortionCoeffsL.tolist()
+            },
+            "right":{
+                "cameraMatrix":self.cameraMatrixR.tolist(),
+                "distortionCoefficients":self.distortionCoeffsR.tolist()
+            }
+        }
 
-        print("Exported as", path)
+        self.dictToJson(results, path)
         
 
     def undistortImages(self):
-        if self.calibrated:
-            for fileName in self.images:
-                image = cv2.imread(fileName)
+        """Undistort and preview images used for calibration"""
+        if not self.isMonoCalibrated():
+            pass
 
-                undistortedImage = cv2.undistort(image, self.cameraMatrix, self.distortionCoeffs, None, self.cameraMatrix)
+        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
+            # Reading left and right images
+            imageL = cv2.imread(fileNameL)
+            imageR = cv2.imread(fileNameR)
 
-                cv2.imshow('UndistortedImage', undistortedImage)
-                cv2.waitKey(500)
+            # Left
+            undistortedImageL = cv2.undistort(imageL, self.cameraMatrixL, \
+                self.distortionCoeffsL, None, self.cameraMatrixL)
+            # Right
+            undistortedImageR = cv2.undistort(imageR, self.cameraMatrixR, \
+                self.distortionCoeffsR, None, self.cameraMatrixR)
 
-            cv2.destroyAllWindows()
-        
-        else:
-            print("Camera hasn't been calibrated yet")
+            cv2.imshow('UndistortedImageL', undistortedImageL)
+            cv2.imshow('UndistortedImageR', undistortedImageR)
+
+            cv2.waitKey(500)
+
+        cv2.destroyAllWindows()
 
 
     def findReprojectionError(self):
-        mean_error = 0
+        """Find reprojection error. Closer to zero, more accurate the 
+        calibration"""
+        if not self.isMonoCalibrated():
+            pass
+
+        meanError = [0, 0] # [Left, Right]
+        error = [0, 0]
         for i in range(len(self.objectPoints)):
+            # Left
             imgpoints2L, _ = cv2.projectPoints(self.objectPoints[i], \
                 self.rotationVecsL[i], self.translationVecsL[i], \
                 self.cameraMatrixL, self.distortionCoeffsL)
-            error = cv2.norm(self.imagePointsL[i], imgpoints2L, cv2.NORM_L2)/len(imgpoints2L)
-            mean_error += error
-        print( "Total error: {}".format(mean_error/len(self.objectPoints)) )
+            error[0] = cv2.norm(self.imagePointsL[i], imgpoints2L, \
+                     cv2.NORM_L2)/len(imgpoints2L)
+            meanError[0] += error[0]
+
+            imgpoints2R, _ = cv2.projectPoints(self.objectPoints[i], \
+                self.rotationVecsR[i], self.translationVecsR[i], \
+                self.cameraMatrixR, self.distortionCoeffsR)
+            error[1] = cv2.norm(self.imagePointsR[i], imgpoints2R, \
+                     cv2.NORM_L2)/len(imgpoints2R)
+            meanError[1] += error[1]
+
+        print("Total error (left): {}".format(meanError[0]/len(self.objectPoints)))
+        print("Total error (right): {}".format(meanError[1]/len(self.objectPoints)))
 
 
 
