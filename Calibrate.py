@@ -136,7 +136,26 @@ class Calibrate:
             print("Not mono calibrated yet")
             return False
 
-    
+
+    def printMonoCalibrationResults(self):
+        """Print mono calibration results"""
+        if not self.isMonoCalibrated():
+            pass
+
+        with np.printoptions(precision=3, suppress=True):
+            print("Left:\n\n")
+            print("Camera matrix:\n", self.cameraMatrixL, "\n")
+            print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
+            print("Rotation vectors:\n", self.rotationVecsL, "\n")
+            print("Translation vectors:\n", self.translationVecsL, "\n")
+
+            print("\n\nRight:\n\n")
+            print("Camera matrix:\n", self.cameraMatrixR, "\n")
+            print("Distortion coefficients:\n", self.distortionCoeffsR, "\n")
+            print("Rotation vectors:\n", self.rotationVecsR, "\n")
+            print("Translation vectors:\n", self.translationVecsR, "\n")
+
+
     def dictToJson(dict, path):
         """Exports given dictionary as a .json file"""
         with open(path, "w") as jsonFile:
@@ -145,61 +164,24 @@ class Calibrate:
         print("Exported as ", path)
 
 
-    def stereoCalibrate(self):
-        """Calibrate camera pair with respect to each other"""
+    def exportMonoCalibrationResults(self, path="data/monoCalibration.json"):
+        """Export results of mono calibration as a json"""
         if not self.isMonoCalibrated():
             pass
 
-        # Flags for calibration; uncomment to enable
-        flags = 0
-        flags |= cv2.CALIB_FIX_INTRINSIC
-        #flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
-        #flags |= cv2.CALIB_USE_INTRINSIC_GUESS
-        #flags |= cv2.CALIB_FIX_FOCAL_LENGTH
-        #flags |= cv2.CALIB_FIX_ASPECT_RATIO
-        #flags |= cv2.CALIB_ZERO_TANGENT_DIST
-        #flags |= cv2.CALIB_RATIONAL_MODEL
-        #flags |= cv2.CALIB_SAME_FOCAL_LENGTH
-        #flags |= cv2.CALIB_FIX_K3
-        #flags |= cv2.CALIB_FIX_K4
-        #flags |= cv2.CALIB_FIX_K5
+        # Crafting dictionary to hold results
+        results = {
+            "left":{    
+                "cameraMatrix":self.cameraMatrixL.tolist(),
+                "distortionCoefficients":self.distortionCoeffsL.tolist()
+            },
+            "right":{
+                "cameraMatrix":self.cameraMatrixR.tolist(),
+                "distortionCoefficients":self.distortionCoeffsR.tolist()
+            }
+        }
 
-        # Intrinsic camara matrices are fixed; only Rotation, Translation
-        # Essential, and Fundamental matrices are calculated
-
-        retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
-        self.cameraMatrixR, self.distortionCoeffsR, \
-        self.stereoRotationMatrix, self.stereoTranslationMatrix, \
-        self.essentialMatrix, self.fundamentalMatrix = \
-            cv2.stereoCalibrate(self.objectPoints, \
-                self.imagePointsL, self.imagePointsR, \
-                self.cameraMatrixL, self.distortionCoeffsL, \
-                self.cameraMatrixR, self.distortionCoeffsR, \
-                self.grayImageL.shape[::-1], criteria=self.stereoCriteria, \
-                flags=flags)
-
-        if retValStereo:
-            self.stereoCalibrated = True
-            print("Stereo calibration complete")
-        
-        else:
-            self.stereoCalibrated = False
-            print("Stereo calibration failed")
-
-    
-    def stereoRectify(self):
-        """Computes rotation (3x3) and projection matrices (3x4) for each 
-        camera, the Q matrix, and valid regions of interest. The Q matrix 
-        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
-        in the rectified coordinate frame."""
-
-        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
-        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
-            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
-                self.cameraMatrixR, self.distortionCoeffsR, \
-                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
-                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
-                newImageSize=(0,0))
+        self.dictToJson(results, path)
 
 
     def exportCameraProperties(self, path="data/cameraProperties.json"):
@@ -245,70 +227,6 @@ class Calibrate:
         self.dictToJson(results, path)
 
 
-    def printResults(self):
-        """Print mono calibration results"""
-        if not self.isMonoCalibrated():
-            pass
-
-        with np.printoptions(precision=3, suppress=True):
-            print("Left:\n\n")
-            print("Camera matrix:\n", self.cameraMatrixL, "\n")
-            print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
-            print("Rotation vectors:\n", self.rotationVecsL, "\n")
-            print("Translation vectors:\n", self.translationVecsL, "\n")
-
-            print("\n\nRight:\n\n")
-            print("Camera matrix:\n", self.cameraMatrixR, "\n")
-            print("Distortion coefficients:\n", self.distortionCoeffsR, "\n")
-            print("Rotation vectors:\n", self.rotationVecsR, "\n")
-            print("Translation vectors:\n", self.translationVecsR, "\n")
-
-
-    def exportMonoCalibrationResults(self, path="data/monoCalibration.json"):
-        """Export results of mono calibration as a json"""
-        if not self.isMonoCalibrated():
-            pass
-
-        # Crafting dictionary to hold results
-        results = {
-            "left":{    
-                "cameraMatrix":self.cameraMatrixL.tolist(),
-                "distortionCoefficients":self.distortionCoeffsL.tolist()
-            },
-            "right":{
-                "cameraMatrix":self.cameraMatrixR.tolist(),
-                "distortionCoefficients":self.distortionCoeffsR.tolist()
-            }
-        }
-
-        self.dictToJson(results, path)
-        
-
-    def undistortImages(self):
-        """Undistort and preview images used for calibration"""
-        if not self.isMonoCalibrated():
-            pass
-
-        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
-            # Reading left and right images
-            imageL = cv2.imread(fileNameL)
-            imageR = cv2.imread(fileNameR)
-
-            # Left
-            undistortedImageL = cv2.undistort(imageL, self.cameraMatrixL, \
-                self.distortionCoeffsL, None, self.cameraMatrixL)
-            # Right
-            undistortedImageR = cv2.undistort(imageR, self.cameraMatrixR, \
-                self.distortionCoeffsR, None, self.cameraMatrixR)
-
-            cv2.imshow('UndistortedImageL', undistortedImageL)
-            cv2.imshow('UndistortedImageR', undistortedImageR)
-
-            cv2.waitKey(500)
-
-        cv2.destroyAllWindows()
-
-
     def findReprojectionError(self):
         """Find reprojection error. Closer to zero, more accurate the 
         calibration"""
@@ -335,6 +253,88 @@ class Calibrate:
 
         print("Total error (left): {}".format(meanError[0]/len(self.objectPoints)))
         print("Total error (right): {}".format(meanError[1]/len(self.objectPoints)))
+
+
+    def undistortImages(self):
+        """Undistort and preview images used for calibration"""
+        if not self.isMonoCalibrated():
+            pass
+
+        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
+            # Reading left and right images
+            imageL = cv2.imread(fileNameL)
+            imageR = cv2.imread(fileNameR)
+
+            # Left
+            undistortedImageL = cv2.undistort(imageL, self.cameraMatrixL, \
+                self.distortionCoeffsL, None, self.cameraMatrixL)
+            # Right
+            undistortedImageR = cv2.undistort(imageR, self.cameraMatrixR, \
+                self.distortionCoeffsR, None, self.cameraMatrixR)
+
+            cv2.imshow('UndistortedImageL', undistortedImageL)
+            cv2.imshow('UndistortedImageR', undistortedImageR)
+
+            cv2.waitKey(500)
+
+        cv2.destroyAllWindows()
+
+
+    def stereoCalibrate(self):
+        """Calibrate camera pair with respect to each other. Check code to 
+        modify flags"""
+        if not self.isMonoCalibrated():
+            pass
+
+        # Flags for calibration; uncomment to enable
+        flags = 0
+        flags |= cv2.CALIB_FIX_INTRINSIC
+        #flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
+        #flags |= cv2.CALIB_USE_INTRINSIC_GUESS
+        #flags |= cv2.CALIB_FIX_FOCAL_LENGTH
+        #flags |= cv2.CALIB_FIX_ASPECT_RATIO
+        #flags |= cv2.CALIB_ZERO_TANGENT_DIST
+        #flags |= cv2.CALIB_RATIONAL_MODEL
+        #flags |= cv2.CALIB_SAME_FOCAL_LENGTH
+        #flags |= cv2.CALIB_FIX_K3
+        #flags |= cv2.CALIB_FIX_K4
+        #flags |= cv2.CALIB_FIX_K5
+
+        # Intrinsic camara matrices are fixed; only Rotation, Translation
+        # Essential, and Fundamental matrices are calculated
+
+        retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
+        self.cameraMatrixR, self.distortionCoeffsR, \
+        self.stereoRotationMatrix, self.stereoTranslationMatrix, \
+        self.essentialMatrix, self.fundamentalMatrix = \
+            cv2.stereoCalibrate(self.objectPoints, \
+                self.imagePointsL, self.imagePointsR, \
+                self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], criteria=self.stereoCriteria, \
+                flags=flags)
+
+        if retValStereo:
+            self.stereoCalibrated = True
+            print("Stereo calibration complete")
+        
+        else:
+            self.stereoCalibrated = False
+            print("Stereo calibration failed")
+
+    
+    def stereoRectify(self):
+        """Computes rotation (3x3) and projection matrices (3x4) for each 
+        camera, the Q matrix, and valid regions of interest. The Q matrix 
+        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
+        in the rectified coordinate frame."""
+        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
+        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
+            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
+                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
+                newImageSize=(0,0))
 
 
 
