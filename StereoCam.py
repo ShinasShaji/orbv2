@@ -75,7 +75,8 @@ class StereoCam:
         retVal = self.getFrames()
 
         while retVal:
-            if ((time.time()-self.previousTime)>=self.frameTime):
+            remainingTime = self.frameTime-(time.time()-self.previousTime)
+            if remainingTime<=0:
                 self.previousTime = time.time()
 
                 retVal = self.getFrames()
@@ -89,6 +90,9 @@ class StereoCam:
                     break
                 if key == 32: # Capture on SPACE
                     self.captureImages()
+
+            else:
+                time.sleep(remainingTime)
 
         cv2.destroyAllWindows()
 
