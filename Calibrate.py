@@ -32,6 +32,7 @@ class Calibrate:
         # Flags
         self.monoCalibrated = False
         self.stereoCalibrated = False
+        self.stereoRectified = False
 
         # StereoRectify
         self.rectifyScale = 1 # alpha; 1 to crop image; 0 to leave uncropped
@@ -358,8 +359,52 @@ class Calibrate:
         }
 
         self.dictToJson(results, path)
-        
 
+
+    def stereoRectify(self):
+        """Computes rotation (3x3) and projection matrices (3x4) for each 
+        camera, the Q matrix, and valid regions of interest. The Q matrix 
+        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
+        in the rectified coordinate frame."""
+        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
+        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
+            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
+                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
+                newImageSize=(0,0))
+
+
+    def isStereoRectified(self):
+        """Check if stereo rectification has been done"""
+        if self.stereoRectified:
+            return True
+        else:
+            print("Not stereo rectified yet")
+            return False
+
+
+    def exportStereoRectifyResults(self, path="data/stereoRectify.json"):
+        """Export results of stereo rectification as a json"""
+        if not self.isStereoRectified():
+            pass
+
+        # Crafting dictionary to hold results
+        results = {
+            "left":{    
+                "rotationMatrix":self.rotationMatrixL.tolist(),
+                "projectionMatrix":self.projectionMatrixL.tolist()
+            },
+            "right":{
+                "rotationMatrix":self.rotationMatrixR.tolist(),
+                "projectionMatrix":self.projectionMatrixR.tolist()
+            },
+            "dispToDepthMatrix":self.dispToDepthMatrix.tolist()
+        }
+
+        self.dictToJson(results, path)
+
+        
 
 if __name__=="__main__":
     print("Run using calibrateCamera.ipynb")

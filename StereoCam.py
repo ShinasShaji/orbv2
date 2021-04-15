@@ -85,6 +85,7 @@ class StereoCam:
 
                 key = cv2.waitKey(20)
                 if key == 27: # Exit on ESC
+                    print("Exiting preview")
                     break
                 if key == 32: # Capture on SPACE
                     self.captureImages()
@@ -99,20 +100,6 @@ class StereoCam:
 
 
 ### To do: Load stereo calibration data and matrices from jsons ###
-
-
-    def stereoRectify(self):
-        """Computes rotation (3x3) and projection matrices (3x4) for each 
-        camera, the Q matrix, and valid regions of interest. The Q matrix 
-        is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
-        in the rectified coordinate frame."""
-        self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
-        self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
-            cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
-                self.cameraMatrixR, self.distortionCoeffsR, \
-                self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
-                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
-                newImageSize=(0,0))
 
 
 
