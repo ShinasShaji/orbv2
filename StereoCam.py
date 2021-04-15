@@ -95,8 +95,8 @@ class StereoCam:
     
     def camPreview(self):
         """Preview camera outputs. Runs as a thread"""
-        previewThread = threading.Thread(target=self.camPreview_Internal)
-        previewThread.start()
+        self.previewThread = threading.Thread(target=self.camPreview_Internal)
+        self.previewThread.start()
 
 
 ### To do: Load stereo calibration data and matrices from jsons ###
