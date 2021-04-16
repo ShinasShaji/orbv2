@@ -1,10 +1,11 @@
-import glob
-import json
-import os
 import fnmatch
+import glob
+import os
 
 import cv2
 import numpy as np
+
+import jsonHandler
 
 
 class Calibrate:
@@ -139,7 +140,7 @@ class Calibrate:
             return False
 
 
-    def printMonoCalibrationResults(self):
+    def printMonoCalibration(self):
         """Print mono calibration results"""
         if not self.isMonoCalibrated():
             pass
@@ -147,26 +148,18 @@ class Calibrate:
         with np.printoptions(precision=3, suppress=True):
             print("Left:\n\n")
             print("Camera matrix:\n", self.cameraMatrixL, "\n")
-            print("Distortion coefficients:\n", self.distortionCoeffsL, "\n")
+            print("Distortion coeffs:\n", self.distortionCoeffsL, "\n")
             print("Rotation vectors:\n", self.rotationVecsL, "\n")
             print("Translation vectors:\n", self.translationVecsL, "\n")
 
             print("\n\nRight:\n\n")
             print("Camera matrix:\n", self.cameraMatrixR, "\n")
-            print("Distortion coefficients:\n", self.distortionCoeffsR, "\n")
+            print("Distortion coeffs:\n", self.distortionCoeffsR, "\n")
             print("Rotation vectors:\n", self.rotationVecsR, "\n")
             print("Translation vectors:\n", self.translationVecsR, "\n")
 
 
-    def dictToJson(dict, path):
-        """Exports given dictionary as a .json file"""
-        with open(path, "w") as jsonFile:
-            json.dump(dict, jsonFile, sort_keys=True, indent=4)
-        
-        print("Exported as ", path)
-
-
-    def exportMonoCalibrationResults(self, path="data/monoCalibration.json"):
+    def exportMonoCalibration(self, path="data/monoCalibration.json"):
         """Export results of mono calibration as a json"""
         if not self.isMonoCalibrated():
             pass
@@ -175,15 +168,15 @@ class Calibrate:
         results = {
             "left":{    
                 "cameraMatrix":self.cameraMatrixL.tolist(),
-                "distortionCoefficients":self.distortionCoeffsL.tolist()
+                "distortionCoeffs":self.distortionCoeffsL.tolist()
             },
             "right":{
                 "cameraMatrix":self.cameraMatrixR.tolist(),
-                "distortionCoefficients":self.distortionCoeffsR.tolist()
+                "distortionCoeffs":self.distortionCoeffsR.tolist()
             }
         }
 
-        self.dictToJson(results, path)
+        jsonHandler.dictToJson(results, path)
 
 
     def exportCameraProperties(self, path="data/cameraProperties.json"):
@@ -226,7 +219,7 @@ class Calibrate:
             },
         }
         
-        self.dictToJson(results, path)
+        jsonHandler.dictToJson(results, path)
 
 
     def findReprojectionError(self):
@@ -334,7 +327,7 @@ class Calibrate:
             return False
 
     
-    def exportStereoCalibrationResults(self, path="data/stereoCalibration.json"):
+    def exportStereoCalibration(self, path="data/stereoCalibration.json"):
         """Export results of stereo calibration as a json"""
         if not self.isStereoCalibrated():
             pass
@@ -343,11 +336,11 @@ class Calibrate:
         results = {
             "left":{    
                 "cameraMatrix":self.cameraMatrixL.tolist(),
-                "distortionCoefficients":self.distortionCoeffsL.tolist()
+                "distortionCoeffs":self.distortionCoeffsL.tolist()
             },
             "right":{
                 "cameraMatrix":self.cameraMatrixR.tolist(),
-                "distortionCoefficients":self.distortionCoeffsR.tolist()
+                "distortionCoeffs":self.distortionCoeffsR.tolist()
             },
             "stereoRotationMatrix":self.stereoRotationMatrix.tolist(),
             "stereoTranslationMatrix":self.stereoTranslationMatrix.tolist(),
@@ -358,7 +351,7 @@ class Calibrate:
             "alpha":self.rectifyScale
         }
 
-        self.dictToJson(results, path)
+        jsonHandler.dictToJson(results, path)
 
 
     def stereoRectify(self):
@@ -384,7 +377,7 @@ class Calibrate:
             return False
 
 
-    def exportStereoRectifyResults(self, path="data/stereoRectify.json"):
+    def exportStereoRectify(self, path="data/stereoRectify.json"):
         """Export results of stereo rectification as a json"""
         if not self.isStereoRectified():
             pass
@@ -402,7 +395,7 @@ class Calibrate:
             "dispToDepthMatrix":self.dispToDepthMatrix.tolist()
         }
 
-        self.dictToJson(results, path)
+        jsonHandler.dictToJson(results, path)
 
         
 

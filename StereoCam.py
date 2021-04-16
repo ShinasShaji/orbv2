@@ -1,10 +1,11 @@
-import json
 import os
-import time
 import threading
+import time
 
 import cv2
 import numpy as np
+
+import jsonHandler
 
 
 class StereoCam:
@@ -14,6 +15,7 @@ class StereoCam:
         self.rightCam = cv2.VideoCapture(rightID)
 
         # Set camera resolution
+        self.imageSize = (width, height)
         self.leftCam.set(3, width)
         self.leftCam.set(4, height)
         self.rightCam.set(3, width)
@@ -27,7 +29,7 @@ class StereoCam:
         self.previousTime = time.time()
         self.frameTime = float(1/fps)
 
-        # For event managed capture and preview
+        # For event managed, threaded capture and preview
         self.imageEvent = threading.Event()
         self.quitEvent = threading.Event()
         self.captureRetVal = True
@@ -35,6 +37,11 @@ class StereoCam:
         # Capture details
         self.imgCounter = 0
         self.capturePath = "captures/" 
+
+        # json data load flags
+        self.monoCalibrationLoaded = False
+        self.cameraPropertiesLoaded = False
+        self.stereoCalibrationLoaded = False
 
 
     def checkOpen(self):
@@ -132,6 +139,71 @@ class StereoCam:
 
 
 ### To do: Load stereo calibration data and matrices from jsons ###
+
+
+    def loadMonoCalibrationResults(self, path="data/monoCalibration.json"):
+        """Loads mono calibration data from given json"""
+
+        dataDict = jsonHandler.jsonToDict(path)
+
+        # Left
+        self.cameraMatrixL = np.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = np.array(dataDict["left"]["distortionCoeffs"])
+
+        # Right
+        self.cameraMatrixR = np.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = np.array(dataDict["right"]["distortionCoeffs"])
+
+        print("Loaded mono calibration")
+
+        self.monoCalibrationLoaded = True
+
+
+    def loadCameraProperties(self, path="data/cameraProperties.json"):
+        """Loads camera characteristics from json"""
+
+        ### To do: Implement ###
+
+        print("Loaded camera properties")
+
+        self.cameraPropertiesLoaded = True
+
+        pass
+
+
+    def loadStereoCalibration(self, path="data/stereoCalibration.json"):
+        """Loads stereo calibration data from given json"""
+
+        dataDict = jsonHandler.jsonToDict(path)
+
+        # Left
+        self.cameraMatrixL = np.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = np.array(dataDict["left"]["distortionCoeffs"])
+
+        # Right
+        self.cameraMatrixR = np.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = np.array(dataDict["right"]["distortionCoeffs"])
+
+        # Common
+        self.stereoRotationMatrix = np.array(dataDict["stereoRotationMatrix"])
+        self.stereoTranslationMatrix = np.array(dataDict["stereoTranslationMatrix"])
+        self.essentialMatrix = np.array(dataDict["essentialMatrix"]) 
+        self.fundamentalMatrix = np.array(dataDict["fundamentalMatrix"])
+        self.rectifyScale = dataDict["alpha"]
+
+        # Image size
+        self.imageSizeL = dataDict["imageSizeL"]
+        self.imageSizeR = dataDict["imageSizeR"]
+
+        if self.imageSize!=self.imageSizeL or self.imageSize!=self.imageSizeR:
+            print("Image size mismatch")
+
+            self.stereoCalibrationLoaded = False
+
+        else:
+            print("Loaded stereo calibration")
+
+            self.stereoCalibrationLoaded = True       
 
 
 
