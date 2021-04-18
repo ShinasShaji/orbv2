@@ -4,7 +4,7 @@ import os
 import cv2
 import numpy
 
-import jsonHandler
+from helperScripts import jsonHelper
 
 
 class ImageProcessing(multiprocessing.Process):
@@ -118,7 +118,7 @@ class ImageProcessing(multiprocessing.Process):
     def loadMonoCalibrationResults(self, path="data/monoCalibration.json"):
         """Loads mono calibration data from given json"""
 
-        dataDict = jsonHandler.jsonToDict(path)
+        dataDict = jsonHelper.jsonToDict(path)
 
         # Left
         self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])
@@ -150,7 +150,7 @@ class ImageProcessing(multiprocessing.Process):
     def loadStereoCalibration(self, path="data/stereoCalibration.json"):
         """Loads stereo calibration data from given json"""
 
-        dataDict = jsonHandler.jsonToDict(path)
+        dataDict = jsonHelper.jsonToDict(path)
 
         # Left
         self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])

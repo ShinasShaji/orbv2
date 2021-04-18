@@ -34,6 +34,9 @@ class ProcessManager():
             self.capture.start()
             self.processing.start()
 
+            self.capture.join()
+            self.processing.join()
+
         else:
             print("Invalid context")
 

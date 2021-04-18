@@ -5,7 +5,7 @@ import os
 import cv2
 import numpy as np
 
-import jsonHandler
+from helperScripts import jsonHelper
 
 
 class Calibrate:
@@ -176,7 +176,7 @@ class Calibrate:
             }
         }
 
-        jsonHandler.dictToJson(results, path)
+        jsonHelper.dictToJson(results, path)
 
 
     def exportCameraProperties(self, path="data/cameraProperties.json"):
@@ -219,7 +219,7 @@ class Calibrate:
             },
         }
         
-        jsonHandler.dictToJson(results, path)
+        jsonHelper.dictToJson(results, path)
 
 
     def findReprojectionError(self):
@@ -351,7 +351,7 @@ class Calibrate:
             "alpha":self.rectifyScale
         }
 
-        jsonHandler.dictToJson(results, path)
+        jsonHelper.dictToJson(results, path)
 
 
     def stereoRectify(self):
@@ -395,7 +395,7 @@ class Calibrate:
             "dispToDepthMatrix":self.dispToDepthMatrix.tolist()
         }
 
-        jsonHandler.dictToJson(results, path)
+        jsonHelper.dictToJson(results, path)
 
         
 

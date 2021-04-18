@@ -121,15 +121,21 @@ class StereoCapture(multiprocessing.Process):
 
     def getFrames(self):
         """Grab and retrieve frames"""
-        for i in range(10):
+        self.previousTime = time.time()
+
+        for i in range(5):
             self.leftCam.grab()
             self.rightCam.grab()
 
-        # Write images to buffer instead of assigning array
+        # Write images to buffer instead of assigning as array
         retLeft, self.leftImage[:] = self.leftCam.retrieve()
         retRight, self.rightImage[:] = self.rightCam.retrieve()
 
         if retLeft and retRight:
+            self.actualFrameTime = time.time() - self.previousTime
+            self.remainingTime = self.frameTime - self.actualFrameTime
+
+            self.imageEvent.set()
             return True
 
         else:
@@ -137,7 +143,7 @@ class StereoCapture(multiprocessing.Process):
 
 
     def capture(self):
-        """Capture images from camera pair"""
+        """Capture images from camera pair
         # Check if camera and buffers have initialized
         if not self.checkOpen() or not self.isBufferReady():
             pass
@@ -145,22 +151,19 @@ class StereoCapture(multiprocessing.Process):
         # Capture frames from camera pair
         while self.getFrames():
 
-            self.imageEvent.set()
             if self.quitEvent.is_set():
-                break
-            
-            actualFrameTime = time.time() - self.previousTime
-            remainingTime = self.frameTime - actualFrameTime
-            print("Frame time:", actualFrameTime, \
-                    "\tRemaining time:", remainingTime, \
+                break     
+                
+            print("Frame time:", self.actualFrameTime, \
+                    "\tRemaining time:", self.remainingTime, \
                         "\tFrame is: ", end="")
-            if remainingTime<0:
-                self.previousTime = time.time()
+
+            if self.remainingTime<0:
                 print("late")
 
             else:
-                time.sleep(remainingTime)
-                print("on time")
+                print("on time", "\tSleep for:", self.remainingTime)
+                time.sleep(self.remainingTime) 
         
         self.leftCam.release()
         self.rightCam.release()
