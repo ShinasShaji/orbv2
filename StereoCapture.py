@@ -143,7 +143,7 @@ class StereoCapture(multiprocessing.Process):
 
 
     def capture(self):
-        """Capture images from camera pair
+        """Capture images from camera pair"""
         # Check if camera and buffers have initialized
         if not self.checkOpen() or not self.isBufferReady():
             pass
