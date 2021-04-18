@@ -125,6 +125,7 @@ class StereoCapture(multiprocessing.Process):
             self.leftCam.grab()
             self.rightCam.grab()
 
+        # Write images to buffer instead of assigning array
         retLeft, self.leftImage[:] = self.leftCam.retrieve()
         retRight, self.rightImage[:] = self.rightCam.retrieve()
 
@@ -148,14 +149,18 @@ class StereoCapture(multiprocessing.Process):
             if self.quitEvent.is_set():
                 break
             
-            frameTime = time.time()-self.previousTime
-            remainingTime = self.frameTime-frameTime
-            print("Frame time:", frameTime)
-            if remainingTime<=0:
+            actualFrameTime = time.time() - self.previousTime
+            remainingTime = self.frameTime - actualFrameTime
+            print("Frame time:", actualFrameTime, \
+                    "\tRemaining time:", remainingTime, \
+                        "\tFrame is: ", end="")
+            if remainingTime<0:
                 self.previousTime = time.time()
+                print("late")
 
             else:
                 time.sleep(remainingTime)
+                print("on time")
         
         self.leftCam.release()
         self.rightCam.release()
@@ -168,4 +173,4 @@ class StereoCapture(multiprocessing.Process):
 
 
 if __name__=="__main__":
-    print("Import to use")
+    print("Handled by ProcessManager")

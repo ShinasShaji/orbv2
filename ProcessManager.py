@@ -1,5 +1,6 @@
-from StereoCapture import StereoCapture
 from ImageProcessing import ImageProcessing
+from StereoCapture import StereoCapture
+
 
 class ProcessManager():
     def __init__(self):
@@ -27,11 +28,14 @@ class ProcessManager():
         # Below are run based on context
         if context=="preview":
             # Communicating context to objects
-            self.processing.selectContext(self.context)
+            self.processing.setContext(self.context)
 
             # Starting processes
             self.capture.start()
             self.processing.start()
+
+        else:
+            print("Invalid context")
 
 
 

@@ -4,6 +4,8 @@ import os
 import cv2
 import numpy
 
+import jsonHandler
+
 
 class ImageProcessing(multiprocessing.Process):
     """Class to handle image processing on capture stream"""
@@ -15,9 +17,17 @@ class ImageProcessing(multiprocessing.Process):
         self.capturePath = "captures/"
 
         # Flags
+        # Capture link
         self.captureBufferReady = False
         self.captureEventReady = False
 
+        # Calibration load
+        self.monoCalibrationLoaded = False
+        self.cameraPropertiesLoaded = False
+        self.stereoCalibrationLoaded = False
+
+
+    ### Methods to link up with capture process
 
     def referenceCaptureBuffers(self, buffers, cvImageShape):
         """Create class references to passed capture buffers and 
@@ -28,6 +38,7 @@ class ImageProcessing(multiprocessing.Process):
         self.leftImageBuffer = buffers[0]
         self.rightImageBuffer = buffers[1]
         self.cvImageShape = cvImageShape
+        self.imageSize = (self.cvImageShape[1], self.cvImageShape[0])
 
         # Creating arrays from memory buffers
         self.leftImage = numpy.frombuffer(self.leftImageBuffer, \
@@ -63,6 +74,8 @@ class ImageProcessing(multiprocessing.Process):
             print("Capture events not referenced")
             return False
 
+
+    ### Methods to preview and save capture 
 
     def captureImages(self):
         """Capture and save images from both cameras"""
@@ -100,7 +113,83 @@ class ImageProcessing(multiprocessing.Process):
         cv2.destroyAllWindows()
 
 
-    def selectContext(self, context):
+    ### Methods to load calibrations and camera properties
+
+    def loadMonoCalibrationResults(self, path="data/monoCalibration.json"):
+        """Loads mono calibration data from given json"""
+
+        dataDict = jsonHandler.jsonToDict(path)
+
+        # Left
+        self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = numpy.array(\
+                                    dataDict["left"]["distortionCoeffs"])
+
+        # Right
+        self.cameraMatrixR = numpy.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = numpy.array(\
+                                    dataDict["right"]["distortionCoeffs"])
+
+        print("Loaded mono calibration")
+
+        self.monoCalibrationLoaded = True
+
+
+    def loadCameraProperties(self, path="data/cameraProperties.json"):
+        """Loads camera characteristics from json"""
+
+        ### To do: Implement ###
+
+        print("Loaded camera properties")
+
+        self.cameraPropertiesLoaded = True
+
+        pass
+
+
+    def loadStereoCalibration(self, path="data/stereoCalibration.json"):
+        """Loads stereo calibration data from given json"""
+
+        dataDict = jsonHandler.jsonToDict(path)
+
+        # Left
+        self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = numpy.array(\
+                                    dataDict["left"]["distortionCoeffs"])
+
+        # Right
+        self.cameraMatrixR = numpy.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = numpy.array(\
+                                    dataDict["right"]["distortionCoeffs"])
+
+        # Common
+        self.stereoRotationMatrix = numpy.array(\
+                                    dataDict["stereoRotationMatrix"])
+        self.stereoTranslationMatrix = numpy.array(\
+                                    dataDict["stereoTranslationMatrix"])
+
+        self.essentialMatrix = numpy.array(dataDict["essentialMatrix"]) 
+        self.fundamentalMatrix = numpy.array(dataDict["fundamentalMatrix"])
+        self.rectifyScale = dataDict["alpha"]
+
+        # Image size
+        self.imageSizeL = dataDict["imageSizeL"]
+        self.imageSizeR = dataDict["imageSizeR"]
+
+        if self.imageSize!=self.imageSizeL or self.imageSize!=self.imageSizeR:
+            print("Image size mismatch")
+
+            self.stereoCalibrationLoaded = False
+
+        else:
+            print("Loaded stereo calibration")
+
+            self.stereoCalibrationLoaded = True
+
+
+    ### Methods to set context and start processes
+
+    def setContext(self, context):
         """Selects which methods to run on start() based on context"""
         self.context = context
 
@@ -113,4 +202,4 @@ class ImageProcessing(multiprocessing.Process):
 
 
 if __name__=="__main__":
-    print("Import to use")
+    print("Handled by ProcessManager")
