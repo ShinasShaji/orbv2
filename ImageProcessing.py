@@ -23,11 +23,10 @@ class ImageProcessing(multiprocessing.Process):
         """Create class references to passed capture buffers and 
         shape buffers into image arrays"""
         # Creating class references to buffers
-        assert buffers is not None, "Initialize capture buffers"
+        assert buffers is not None and cvImageShape is not None, \
+                                            "Initialize capture buffers"
         self.leftImageBuffer = buffers[0]
         self.rightImageBuffer = buffers[1]
-
-        assert cvImageShape is not None, "Initialize capture buffers"
         self.cvImageShape = cvImageShape
 
         # Creating arrays from memory buffers
@@ -70,7 +69,7 @@ class ImageProcessing(multiprocessing.Process):
         for (cam, frame) in \
             [("left", self.leftImage), ("right", self.rightImage)]:
 
-            imageName = "".join([cam, "_{}.png".format(self.imgCounter)])
+            imageName = "".join([cam, "_{}.png".format(self.imageCounter)])
             cv2.imwrite(os.path.join(self.capturePath, imageName), frame)
             print("Captured {}".format(imageName))
 
@@ -101,9 +100,15 @@ class ImageProcessing(multiprocessing.Process):
         cv2.destroyAllWindows()
 
 
+    def selectContext(self, context):
+        """Selects which methods to run on start() based on context"""
+        self.context = context
+
+
     def run(self):
         """Runs when start() is called on this process"""
-        self.capturePreview()
+        if self.context=="preview":
+            self.capturePreview()
 
 
 

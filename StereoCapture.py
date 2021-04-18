@@ -62,6 +62,8 @@ class StereoCapture(multiprocessing.Process):
         # Check if camera pair has initialized
         if not self.checkOpen():
             pass
+        
+        print("Initialized camera pair")
 
         # Finding image shape
         retVal, leftImage = self.leftCam.read()
@@ -81,6 +83,7 @@ class StereoCapture(multiprocessing.Process):
                             dtype=numpy.uint8).reshape(self.cvImageShape)
 
         self.bufferReady = True
+        print("Initialized capture buffers")
 
     
     def isBufferReady(self):
@@ -134,17 +137,20 @@ class StereoCapture(multiprocessing.Process):
 
     def capture(self):
         """Capture images from camera pair"""
-        print("Initializing cameras for preview")
+        # Check if camera and buffers have initialized
         if not self.checkOpen() or not self.isBufferReady():
             pass
             
+        # Capture frames from camera pair
         while self.getFrames():
 
             self.imageEvent.set()
             if self.quitEvent.is_set():
                 break
-
-            remainingTime = self.frameTime-(time.time()-self.previousTime)
+            
+            frameTime = time.time()-self.previousTime
+            remainingTime = self.frameTime-frameTime
+            print("Frame time:", frameTime)
             if remainingTime<=0:
                 self.previousTime = time.time()
 
