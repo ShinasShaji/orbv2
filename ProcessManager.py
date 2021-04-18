@@ -18,12 +18,13 @@ class ProcessManager():
             self.capture.getCaptureEvents())
 
 
-    def runProcesses(self, context):
+    def runProcesses(self, context=None):
         """Start processes based on context"""
+        assert context is not None, "No context provided"
+        self.context = context
+
         # Capture pipeline is prepared regardless of context
         self.prepareCapturePipeline()
-
-        self.context = context
 
         # Below are run based on context
         if context=="preview":

@@ -37,6 +37,8 @@ class ImageProcessing(multiprocessing.Process):
                                             "Initialize capture buffers"
         self.leftImageBuffer = buffers[0]
         self.rightImageBuffer = buffers[1]
+        self.captureTimeBuffer = buffers[2]
+
         self.cvImageShape = cvImageShape
         self.imageSize = (self.cvImageShape[1], self.cvImageShape[0])
 
@@ -45,11 +47,14 @@ class ImageProcessing(multiprocessing.Process):
                             dtype=numpy.uint8).reshape(self.cvImageShape)
         self.rightImage = numpy.frombuffer(self.rightImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
+        self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
+                            dtype=numpy.float64)
         
         self.captureBufferReady = True
 
     
     def isCaptureBufferReady(self):
+        """Check if capture buffers have been referenced"""
         if self.captureBufferReady:
             return True
         
@@ -67,6 +72,7 @@ class ImageProcessing(multiprocessing.Process):
 
 
     def isCaptureEventReady(self):
+        """Check if capture events have been referenced"""
         if self.captureEventReady:
             return True
         

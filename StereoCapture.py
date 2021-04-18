@@ -75,12 +75,16 @@ class StereoCapture(multiprocessing.Process):
             self.cvImageSize, lock=False)
         self.rightImageBuffer = multiprocessing.Array(ctypes.c_uint8, \
             self.cvImageSize, lock=False)
+        self.captureTimeBuffer = multiprocessing.Array(ctypes.c_double, \
+            1, lock=False)
 
         # Creating arrays from memory buffers
         self.leftImage = numpy.frombuffer(self.leftImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
         self.rightImage = numpy.frombuffer(self.rightImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
+        self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
+                            dtype=numpy.float64)
 
         self.bufferReady = True
         print("Initialized capture buffers")
@@ -108,7 +112,8 @@ class StereoCapture(multiprocessing.Process):
     def getBuffers(self):
         """Returns references of left, right internal buffers"""
         if self.isBufferReady():
-            return (self.leftImageBuffer, self.rightImageBuffer)
+            return (self.leftImageBuffer, self.rightImageBuffer, \
+                    self.captureTimeBuffer)
         
         else:
             return None
@@ -126,6 +131,8 @@ class StereoCapture(multiprocessing.Process):
         for i in range(5):
             self.leftCam.grab()
             self.rightCam.grab()
+        
+        self.captureTime[0] = time.time()
 
         # Write images to buffer instead of assigning as array
         retLeft, self.leftImage[:] = self.leftCam.retrieve()
@@ -154,15 +161,16 @@ class StereoCapture(multiprocessing.Process):
             if self.quitEvent.is_set():
                 break     
                 
-            print("Frame time:", self.actualFrameTime, \
-                    "\tRemaining time:", self.remainingTime, \
-                        "\tFrame is: ", end="")
+            print("Capture time: {:.5f}  Frame time: {:.5f}  "\
+                .format(self.captureTime[0], self.actualFrameTime), end="")
+            print("Remaining time: {:.5f}  Frame is:"\
+                .format(self.remainingTime), end=" ")
 
             if self.remainingTime<0:
                 print("late")
 
             else:
-                print("on time", "\tSleep for:", self.remainingTime)
+                print("on time")
                 time.sleep(self.remainingTime) 
         
         self.leftCam.release()
