@@ -25,6 +25,7 @@ class ImageProcessing(multiprocessing.Process):
         self.monoCalibrationLoaded = False
         self.cameraPropertiesLoaded = False
         self.stereoCalibrationLoaded = False
+        self.stereoRectifyLoaded = False
 
 
     ### Methods to link up with capture process
@@ -40,12 +41,12 @@ class ImageProcessing(multiprocessing.Process):
         self.captureTimeBuffer = buffers[2]
 
         self.cvImageShape = cvImageShape
-        self.imageSize = (self.cvImageShape[1], self.cvImageShape[0])
+        self.imageResolution = (self.cvImageShape[1], self.cvImageShape[0])
 
         # Creating arrays from memory buffers
-        self.leftImage = numpy.frombuffer(self.leftImageBuffer, \
+        self.imageL = numpy.frombuffer(self.leftImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.rightImage = numpy.frombuffer(self.rightImageBuffer, \
+        self.imageR = numpy.frombuffer(self.rightImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
         self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
                             dtype=numpy.float64)
@@ -86,7 +87,7 @@ class ImageProcessing(multiprocessing.Process):
     def captureImages(self):
         """Capture and save images from both cameras"""
         for (cam, frame) in \
-            [("left", self.leftImage), ("right", self.rightImage)]:
+            [("left", self.imageL), ("right", self.imageR)]:
 
             imageName = "".join([cam, "_{}.png".format(self.imageCounter)])
             cv2.imwrite(os.path.join(self.capturePath, imageName), frame)
@@ -99,12 +100,12 @@ class ImageProcessing(multiprocessing.Process):
         """Previews capture. Event managed"""
         if not self.isCaptureBufferReady() or \
             not self.isCaptureEventReady():
-            pass
+            return
 
         while not self.quitEvent.is_set():
             if self.imageEvent.wait():
-                cv2.imshow('Left', self.leftImage)
-                cv2.imshow('Right', self.rightImage)
+                cv2.imshow('Left', self.imageL)
+                cv2.imshow('Right', self.imageR)
 
                 self.imageEvent.clear()
 
@@ -164,8 +165,6 @@ class ImageProcessing(multiprocessing.Process):
 
         self.cameraPropertiesLoaded = True
 
-        pass
-
 
     def loadStereoCalibration(self, path="data/stereoCalibration.json"):
         """Loads stereo calibration data from given json"""
@@ -193,19 +192,115 @@ class ImageProcessing(multiprocessing.Process):
         self.rectifyScale = dataDict["alpha"]
 
         # Image size
+        self.grayImageSizeL = dataDict["grayImageSizeL"]
+        self.grayImageSizeR = dataDict["grayImageSizeR"]
+
         self.imageSizeL = dataDict["imageSizeL"]
         self.imageSizeR = dataDict["imageSizeR"]
 
-        if self.imageSize!=self.imageSizeL or \
-                            self.imageSize!=self.imageSizeR:
-            print("Image size mismatch")
+        self.stereoCalibrationLoaded = False
 
-            self.stereoCalibrationLoaded = False
 
-        else:
-            print("Loaded stereo calibration")
+    def loadStereoRectify(self, path="data/stereoRectify.json"):
+        """Loads stereo rectification data from given json"""
 
-            self.stereoCalibrationLoaded = True
+        dataDict = jsonHelper.jsonToDict(path)
+
+        # Left
+        self.rotationMatrixL = numpy.array(\
+                                    dataDict["left"]["rotationMatrix"])
+        self.projectionMatrixL = numpy.array(\
+                                    dataDict["left"]["projectionMatrix"])
+
+        # Right
+        self.rotationMatrixR = numpy.array(\
+                                    dataDict["right"]["rotationMatrix"])
+        self.projectionMatrixR = numpy.array(\
+                                    dataDict["right"]["projectionMatrix"])
+
+        # Common
+        # Q matrix
+        self.dispToDepthMatrix = dataDict["dispToDepthMatrix"]
+
+        self.stereoRectifyLoaded = True
+
+
+    ### Disparity map generation
+    
+    def initUndistortRectifyMap(self):
+        """Computes the joint undistortion and rectification transformation 
+        and represents the result in the form of maps for remap()"""
+
+        if not self.stereoRectifyLoaded:
+            print("Stereo rectification data not loaded")
+            return
+
+        if not self.stereoCalibrationLoaded:
+            print("Stereo calibration not loaded")
+            return
+
+        # Left
+        self.undistortMapL = cv2.initUndistortRectifyMap(\
+                self.cameraMatrixL, self.distortionCoeffsL, \
+                self.rotationMatrixL, self.projectionMatrixL, \
+                self.grayImageSizeL[::-1], cv2.CV_16SC2)  
+        # cv2.CV_16SC2: Format enables faster execution
+
+        # Right
+        self.undistortMapR = cv2.initUndistortRectifyMap(\
+                self.cameraMatrixR, self.distortionCoeffsR, \
+                self.rotationMatrixR, self.projectionMatrixR, \
+                self.grayImageSizeR[::-1], cv2.CV_16SC2)
+
+    
+    def createStereoSGBM(self):
+        """Create SGBM stereo matchers, implementing the modified 
+        H. Hirschmuller algorithm"""
+        # Parameters
+        blockSize = 3
+        minDisparity = 2
+        numDisparity = 130 - minDisparity
+        
+        # Creating StereoSGBM matchers
+        # Left
+        self.stereoSGBML = cv2.StereoSGBM_create(minDisparity=minDisparity, \
+            numDisparities=numDisparity, blockSize=blockSize, \
+            uniquenessRatio=10, speckleWindowSize=100, speckleRange = 32, \
+            disp12MaxDiff=5, P1 = 8*3*blockSize**2, P2 = 32*3*blockSize**2)
+
+        # Right
+        self.stereoSGBMR = cv2.ximgproc.createRightMatcher(self.stereoSGBML)
+
+
+    def createDisparityWLSFilter(self):
+        """Create disparity map filter based on Weighted Least Squares 
+        filter"""
+        # Parameters
+        lmbda = 80000
+        sigma = 1.8
+        visual_multiplier = 1.0
+
+        # Creating filter
+        wls_filter = cv2.ximgproc.createDisparityWLSFilter(\
+                                            matcher_left=self.stereoSGBML)
+        
+        # Setting parameters
+        wls_filter.setLambda(lmbda)
+        wls_filter.setSigmaColor(sigma)
+
+    
+    def undistortRectifyRemap(self):
+        """Calls remap on the images using undistortMaps to undistort and
+        rectify image pair"""
+        # Left
+        self.undistortImageL = cv2.remap(\
+            self.imageL, self.undistortMapL[0], self.undistortMapL[1], \
+            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+
+        # Right
+        self.undistortImageR= cv2.remap(\
+            self.imageR, self.undistortMapR[0], self.undistortMapR[1], \
+            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
 
     ### Methods to set context and start processes

@@ -61,7 +61,7 @@ class StereoCapture(multiprocessing.Process):
         """Create and shape buffers into image arrays"""
         # Check if camera pair has initialized
         if not self.checkOpen():
-            pass
+            return
         
         print("Initialized camera pair")
 
@@ -79,9 +79,9 @@ class StereoCapture(multiprocessing.Process):
             1, lock=False)
 
         # Creating arrays from memory buffers
-        self.leftImage = numpy.frombuffer(self.leftImageBuffer, \
+        self.imageL = numpy.frombuffer(self.leftImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.rightImage = numpy.frombuffer(self.rightImageBuffer, \
+        self.imageR = numpy.frombuffer(self.rightImageBuffer, \
                             dtype=numpy.uint8).reshape(self.cvImageShape)
         self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
                             dtype=numpy.float64)
@@ -135,8 +135,8 @@ class StereoCapture(multiprocessing.Process):
         self.captureTime[0] = time.time()
 
         # Write images to buffer instead of assigning as array
-        retLeft, self.leftImage[:] = self.leftCam.retrieve()
-        retRight, self.rightImage[:] = self.rightCam.retrieve()
+        retLeft, self.imageL[:] = self.leftCam.retrieve()
+        retRight, self.imageR[:] = self.rightCam.retrieve()
 
         if retLeft and retRight:
             self.actualFrameTime = time.time() - self.previousTime
@@ -153,7 +153,7 @@ class StereoCapture(multiprocessing.Process):
         """Capture images from camera pair"""
         # Check if camera and buffers have initialized
         if not self.checkOpen() or not self.isBufferReady():
-            pass
+            return
             
         # Capture frames from camera pair
         while self.getFrames():

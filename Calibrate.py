@@ -61,12 +61,12 @@ class Calibrate:
 
         for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
             # Reading left and right images
-            imageL = cv2.imread(fileNameL)
-            imageR = cv2.imread(fileNameR)
+            self.imageL = cv2.imread(fileNameL)
+            self.imageR = cv2.imread(fileNameR)
 
             # Converting to grayscale
-            self.grayImageL = cv2.cvtColor(imageL, cv2.COLOR_BGR2GRAY)
-            self.grayImageR = cv2.cvtColor(imageR, cv2.COLOR_BGR2GRAY)
+            self.grayImageL = cv2.cvtColor(self.imageL, cv2.COLOR_BGR2GRAY)
+            self.grayImageR = cv2.cvtColor(self.imageR, cv2.COLOR_BGR2GRAY)
 
             # Finding chess board corners
             retValL, cornersL = cv2.findChessboardCorners(self.grayImageL, self.chessBoardSize, None)
@@ -83,11 +83,11 @@ class Calibrate:
                 self.imagePointsR.append(cornersR)
 
                 # Draw and display the corners
-                cv2.drawChessboardCorners(imageL, self.chessBoardSize, cornersL, retValL)
-                cv2.drawChessboardCorners(imageR, self.chessBoardSize, cornersR, retValR)
+                cv2.drawChessboardCorners(self.imageL, self.chessBoardSize, cornersL, retValL)
+                cv2.drawChessboardCorners(self.imageR, self.chessBoardSize, cornersR, retValR)
 
-                cv2.imshow('Chessboard_Left', imageL)
-                cv2.imshow('Chessboard_Right', imageR)
+                cv2.imshow('Chessboard_Left', self.imageL)
+                cv2.imshow('Chessboard_Right', self.imageR)
 
                 cv2.waitKey(500)
 
@@ -143,7 +143,7 @@ class Calibrate:
     def printMonoCalibration(self):
         """Print mono calibration results"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         with np.printoptions(precision=3, suppress=True):
             print("Left:\n\n")
@@ -162,7 +162,7 @@ class Calibrate:
     def exportMonoCalibration(self, path="data/monoCalibration.json"):
         """Export results of mono calibration as a json"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         # Crafting dictionary to hold results
         results = {
@@ -183,7 +183,7 @@ class Calibrate:
         """Computes various useful camera characteristics from the previously 
         estimated camera matrix"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         # Left
         fovXL, fovYL, focalLengthL, principalPointL, aspectRatioL = \
@@ -226,7 +226,7 @@ class Calibrate:
         """Find reprojection error. Closer to zero, more accurate the 
         calibration"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         meanError = [0, 0] # [Left, Right]
         error = [0, 0]
@@ -253,18 +253,18 @@ class Calibrate:
     def undistortImages(self):
         """Undistort and preview images used for calibration"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
             # Reading left and right images
-            imageL = cv2.imread(fileNameL)
-            imageR = cv2.imread(fileNameR)
+            self.imageL = cv2.imread(fileNameL)
+            self.imageR = cv2.imread(fileNameR)
 
             # Left
-            undistortedImageL = cv2.undistort(imageL, self.cameraMatrixL, \
+            undistortedImageL = cv2.undistort(self.imageL, self.cameraMatrixL, \
                 self.distortionCoeffsL, None, self.cameraMatrixL)
             # Right
-            undistortedImageR = cv2.undistort(imageR, self.cameraMatrixR, \
+            undistortedImageR = cv2.undistort(self.imageR, self.cameraMatrixR, \
                 self.distortionCoeffsR, None, self.cameraMatrixR)
 
             cv2.imshow('UndistortedImageL', undistortedImageL)
@@ -279,7 +279,7 @@ class Calibrate:
         """Calibrate camera pair with respect to each other. Check code to 
         modify flags"""
         if not self.isMonoCalibrated():
-            pass
+            return
 
         # Flags for calibration; uncomment to enable
         flags = 0
@@ -330,7 +330,7 @@ class Calibrate:
     def exportStereoCalibration(self, path="data/stereoCalibration.json"):
         """Export results of stereo calibration as a json"""
         if not self.isStereoCalibrated():
-            pass
+            return
 
         # Crafting dictionary to hold results
         results = {
@@ -346,8 +346,10 @@ class Calibrate:
             "stereoTranslationMatrix":self.stereoTranslationMatrix.tolist(),
             "essentialMatrix":self.essentialMatrix.tolist(), 
             "fundamentalMatrix":self.fundamentalMatrix.tolist(),
-            "imageSizeL":self.grayImageL.shape[::-1],
-            "imageSizeR":self.grayImageR.shape[::-1],
+            "grayImageSizeL":self.grayImageL.shape,
+            "grayImageSizeR":self.grayImageR.shape,
+            "imageSizeL":self.imageL.shape,
+            "imageSizeR":self.imageR.shape,
             "alpha":self.rectifyScale
         }
 
@@ -380,7 +382,7 @@ class Calibrate:
     def exportStereoRectify(self, path="data/stereoRectify.json"):
         """Export results of stereo rectification as a json"""
         if not self.isStereoRectified():
-            pass
+            return
 
         # Crafting dictionary to hold results
         results = {
