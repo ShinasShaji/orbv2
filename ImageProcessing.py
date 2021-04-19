@@ -302,6 +302,23 @@ class ImageProcessing(multiprocessing.Process):
             self.imageR, self.undistortMapR[0], self.undistortMapR[1], \
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
+    
+    def convertUndistortToGrayscale(self):
+        """Convert undistorted BGR images to GRAY"""
+        self.grayImageL = cv2.cvtColor(self.undistortImageL, \
+                                                    cv2.COLOR_BGR2GRAY)
+        self.grayImageR = cv2.cvtColor(self.undistortImageR, \
+                                                    cv2.COLOR_BGR2GRAY)
+
+    
+    def computeDisparityMap(self):
+        """Compute the left and right disparity maps"""
+        self.disparityMap = self.stereoSGBML.compute(\
+                                        self.grayImageL, self.grayImageR)
+        self.disparityMapL = numpy.int16(self.disparityMap)
+        self.disparityMapR = numpy.int16(self.stereoSGBMR.compute(\
+                                        self.grayImageR, self.grayImageL))
+
 
     ### Methods to set context and start processes
 
