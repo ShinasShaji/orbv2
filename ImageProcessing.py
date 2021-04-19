@@ -144,7 +144,21 @@ class ImageProcessing(multiprocessing.Process):
     def loadCameraProperties(self, path="data/cameraProperties.json"):
         """Loads camera characteristics from json"""
 
-        ### To do: Implement ###
+        dataDict = jsonHelper.jsonToDict(path)
+
+        # Left
+        self.fovXL = dataDict["left"]["fieldOfView"]["horizontal"]
+        self.fovYL = dataDict["left"]["fieldOfView"]["vertical"]
+        self.focalLengthL = dataDict["left"]["focalLength"]
+        self.principalPointL = dataDict["left"]["principalPoint"]
+        self.aspectRatioL = dataDict["left"]["aspectRatio"]
+
+        # Right
+        self.fovXR = dataDict["right"]["fieldOfView"]["horizontal"]
+        self.fovYR = dataDict["right"]["fieldOfView"]["vertical"]
+        self.focalLengthR = dataDict["right"]["focalLength"]
+        self.principalPointR = dataDict["right"]["principalPoint"]
+        self.aspectRatioR = dataDict["right"]["aspectRatio"]
 
         print("Loaded camera properties")
 
@@ -182,7 +196,8 @@ class ImageProcessing(multiprocessing.Process):
         self.imageSizeL = dataDict["imageSizeL"]
         self.imageSizeR = dataDict["imageSizeR"]
 
-        if self.imageSize!=self.imageSizeL or self.imageSize!=self.imageSizeR:
+        if self.imageSize!=self.imageSizeL or \
+                            self.imageSize!=self.imageSizeR:
             print("Image size mismatch")
 
             self.stereoCalibrationLoaded = False
