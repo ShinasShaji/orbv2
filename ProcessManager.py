@@ -4,18 +4,20 @@ from StereoCapture import StereoCapture
 
 class ProcessManager():
     def __init__(self):
-        self.capture = StereoCapture()
-        self.processing = ImageProcessing()
+        self.stereoCapture = StereoCapture()
+        self.imageProcessing = ImageProcessing()
 
 
     def prepareCapturePipeline(self):
-        self.capture.createBuffers()
+        """References bufers and events required for capture"""
+        self.stereoCapture.createBuffers()
 
-        self.processing.referenceCaptureBuffers(\
-            self.capture.getBuffers(), self.capture.getCVImageShape())
+        self.imageProcessing.referenceCaptureBuffers(\
+            self.stereoCapture.getBuffers(), \
+            self.stereoCapture.getCVImageShape())
 
-        self.processing.referenceCaptureEvents(\
-            self.capture.getCaptureEvents())
+        self.imageProcessing.referenceCaptureEvents(\
+            self.stereoCapture.getCaptureEvents())
 
 
     def runProcesses(self, context=None):
@@ -27,16 +29,27 @@ class ProcessManager():
         self.prepareCapturePipeline()
 
         # Below are run based on context
-        if context=="preview":
+        if self.context=="preview":
             # Communicating context to objects
-            self.processing.setContext(self.context)
+            self.imageProcessing.setContext(self.context)
 
             # Starting processes
-            self.capture.start()
-            self.processing.start()
+            self.stereoCapture.start()
+            self.imageProcessing.start()
 
-            self.capture.join()
-            self.processing.join()
+            self.stereoCapture.join()
+            self.imageProcessing.join()
+
+        if self.context=="previewDisparity":
+            # Communicating context to objects
+            self.imageProcessing.setContext(self.context)
+
+            # Starting processes
+            self.stereoCapture.start()
+            self.imageProcessing.start()
+
+            self.stereoCapture.join()
+            self.imageProcessing.join()
 
         else:
             print("Invalid context")
@@ -44,5 +57,5 @@ class ProcessManager():
 
 
 if __name__=="__main__":
-    processes = ProcessManager()
-    processes.runProcesses("preview")
+    processManager = ProcessManager()
+    processManager.runProcesses("previewDisparity")

@@ -8,7 +8,7 @@ import numpy
 
 class StereoCapture(multiprocessing.Process):
     """Class to handle capture from stereo camera setup"""
-    def __init__(self, cameraID=(2,0), imageSize=(1280,720), fps=2):
+    def __init__(self, cameraID=(2,0), imageSize=(1280/2,720/2), fps=2):
         super(StereoCapture, self).__init__()
 
         # Camera IDs and properties

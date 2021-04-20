@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import time
 
 import cv2
 import numpy
@@ -81,42 +82,85 @@ class ImageProcessing(multiprocessing.Process):
             print("Capture events not referenced")
             return False
 
+    
+    def isCapturePipelineReady(self):
+        """Check if the capture pipeline is ready"""
+        if not self.isCaptureBufferReady() or \
+            not self.isCaptureEventReady():
+            print("Capture pipeline is not ready")
+            return False
+        
+        else:
+            return True
+
 
     ### Methods to preview and save capture 
 
     def captureImages(self):
         """Capture and save images from both cameras"""
-        for (cam, frame) in \
+        for (camera, frame) in \
             [("left", self.imageL), ("right", self.imageR)]:
 
-            imageName = "".join([cam, "_{}.png".format(self.imageCounter)])
+            imageName = "".join([camera, "_{}.png".format(self.imageCounter)])
             cv2.imwrite(os.path.join(self.capturePath, imageName), frame)
             print("Captured {}".format(imageName))
 
         self.imageCounter += 1
 
+    
+    def pollCapture(self):
+        """Wait for and acknowledge next frame pair loaded into buffer"""
+        if self.imageEvent.wait():
+            self.pickupTime = self.captureTime[0]
+            self.imageEvent.clear()
 
-    def capturePreview(self):
+
+    def previewCapture(self):
         """Previews capture. Event managed"""
-        if not self.isCaptureBufferReady() or \
-            not self.isCaptureEventReady():
+        if not self.isCapturePipelineReady():
             return
 
         while not self.quitEvent.is_set():
-            if self.imageEvent.wait():
-                cv2.imshow('Left', self.imageL)
-                cv2.imshow('Right', self.imageR)
+            self.pollCapture()
 
-                self.imageEvent.clear()
+            cv2.imshow("Left", self.imageL)
+            cv2.imshow("Right", self.imageR)
 
-                key = cv2.waitKey(20)
-                if key == 27: # Exit on ESC
-                    print("Exiting preview")
-                    self.quitEvent.set()
-                    break
-                if key == 32: # Capture on SPACE
-                    self.captureImages()
+            key = cv2.waitKey(20)
+            if key == 27: # Exit on ESC
+                print("Exiting preview")
+                self.quitEvent.set()
+                break
+            if key == 32: # Capture on SPACE
+                self.captureImages()
             
+        cv2.destroyAllWindows()
+
+    
+    def previewDisparity(self):
+        """Compute and preview disparity map"""
+        if not self.isCapturePipelineReady():
+            return
+
+        self.createStereoSGBM()
+
+        while not self.quitEvent.is_set():
+            self.pollCapture()
+
+            self.convertCaptureToGrayscale()
+            self.computeDisparityMapL()
+
+            cv2.imshow("Disparity", self.disparityMapL)
+
+            print("Disparity compute time: {:.5f}"\
+                .format(time.time()-self.pickupTime))
+
+            key = cv2.waitKey(20)
+            if key == 27: # Exit on ESC
+                print("Exiting disparity preview")
+                self.quitEvent.set()
+                break
+
         cv2.destroyAllWindows()
 
 
@@ -263,13 +307,13 @@ class ImageProcessing(multiprocessing.Process):
         
         # Creating StereoSGBM matchers
         # Left
-        self.stereoSGBML = cv2.StereoSGBM_create(minDisparity=minDisparity, \
+        self.stereoL = cv2.StereoSGBM_create(minDisparity=minDisparity, \
             numDisparities=numDisparity, blockSize=blockSize, \
             uniquenessRatio=10, speckleWindowSize=100, speckleRange = 32, \
             disp12MaxDiff=5, P1 = 8*3*blockSize**2, P2 = 32*3*blockSize**2)
 
         # Right
-        self.stereoSGBMR = cv2.ximgproc.createRightMatcher(self.stereoSGBML)
+        self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
 
 
     def createDisparityWLSFilter(self):
@@ -278,11 +322,11 @@ class ImageProcessing(multiprocessing.Process):
         # Parameters
         lmbda = 80000
         sigma = 1.8
-        visual_multiplier = 1.0
+        visualMultiplier = 1.0
 
         # Creating filter
         wls_filter = cv2.ximgproc.createDisparityWLSFilter(\
-                                            matcher_left=self.stereoSGBML)
+                                            matcher_left=self.stereoL)
         
         # Setting parameters
         wls_filter.setLambda(lmbda)
@@ -303,6 +347,12 @@ class ImageProcessing(multiprocessing.Process):
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
     
+    def convertCaptureToGrayscale(self):
+        """Convert captures BGR images to GRAY"""
+        self.grayImageL = cv2.cvtColor(self.imageL, cv2.COLOR_BGR2GRAY)
+        self.grayImageR = cv2.cvtColor(self.imageR, cv2.COLOR_BGR2GRAY)
+
+    
     def convertUndistortToGrayscale(self):
         """Convert undistorted BGR images to GRAY"""
         self.grayImageL = cv2.cvtColor(self.undistortImageL, \
@@ -311,13 +361,21 @@ class ImageProcessing(multiprocessing.Process):
                                                     cv2.COLOR_BGR2GRAY)
 
     
-    def computeDisparityMap(self):
-        """Compute the left and right disparity maps"""
-        self.disparityMap = self.stereoSGBML.compute(\
+    def computeDisparityMapLR(self):
+        """Compute the left and right disparity maps from current 
+        grayscale images"""
+        self.disparityMap = self.stereoL.compute(\
                                         self.grayImageL, self.grayImageR)
         self.disparityMapL = numpy.int16(self.disparityMap)
-        self.disparityMapR = numpy.int16(self.stereoSGBMR.compute(\
+        self.disparityMapR = numpy.int16(self.stereoR.compute(\
                                         self.grayImageR, self.grayImageL))
+    
+
+    def computeDisparityMapL(self):
+        """Compute the left disparity map from current grayscale 
+        images"""
+        self.disparityMapL = self.stereoL.compute(\
+                                        self.grayImageL, self.grayImageR)
 
 
     ### Methods to set context and start processes
@@ -330,7 +388,10 @@ class ImageProcessing(multiprocessing.Process):
     def run(self):
         """Runs when start() is called on this process"""
         if self.context=="preview":
-            self.capturePreview()
+            self.previewCapture()
+
+        elif self.context=="previewDisparity":
+            self.previewDisparity()
 
 
 
