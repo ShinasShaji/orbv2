@@ -4,6 +4,7 @@ import time
 
 import cv2
 import numpy
+from numpy.core.shape_base import block
 
 from helperScripts import jsonHelper
 
@@ -142,15 +143,17 @@ class ImageProcessing(multiprocessing.Process):
         if not self.isCapturePipelineReady():
             return
 
-        self.createStereoSGBM()
+        self.createStereoMatcher("SGBM")
 
         while not self.quitEvent.is_set():
             self.pollCapture()
 
             self.convertCaptureToGrayscale()
             self.computeDisparityMapL()
+            self.clampDisparity(2, 128)
+            self.applyClosingFilter()
 
-            cv2.imshow("Disparity", self.disparityMapL)
+            cv2.imshow("Disparity", self.disparityMap)
 
             print("Disparity compute time: {:.5f}"\
                 .format(time.time()-self.pickupTime))
@@ -303,17 +306,52 @@ class ImageProcessing(multiprocessing.Process):
         # Parameters
         blockSize = 3
         minDisparity = 2
-        numDisparity = 130 - minDisparity
+        numDisparities = 130 - minDisparity
+        penalty1 = 8*3*blockSize**2
+        penalty2 = 32*3*blockSize**2
+        uniquenessRatio = 10
+        speckleWindowSize = 100
+        speckleRange = 32
+        disp12MaxDiff = 5
         
         # Creating StereoSGBM matchers
         # Left
         self.stereoL = cv2.StereoSGBM_create(minDisparity=minDisparity, \
-            numDisparities=numDisparity, blockSize=blockSize, \
-            uniquenessRatio=10, speckleWindowSize=100, speckleRange = 32, \
-            disp12MaxDiff=5, P1 = 8*3*blockSize**2, P2 = 32*3*blockSize**2)
+            numDisparities=numDisparities, blockSize=blockSize, \
+            uniquenessRatio=uniquenessRatio, \
+            speckleRange = speckleRange, \
+            speckleWindowSize=speckleWindowSize, \
+            disp12MaxDiff=disp12MaxDiff, \
+            P1 = penalty1, P2 = penalty2)
 
         # Right
         self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
+
+    
+    def createStereoBM(self):
+        """Create Stereo BM matchers"""
+        # Parameters
+        numDisparities = 80
+        blockSize = 21
+
+        self.stereoL = cv2.StereoBM_create(\
+                                    numDisparities=numDisparities, \
+                                    blockSize=blockSize)
+
+        self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
+
+    
+    def createStereoMatcher(self, matcher=None):
+        """Create StereoBM or StereoSGBM matcher objects"""
+        assert matcher is not None, "No matcher specified"
+
+        if matcher=="SGBM":
+            self.createStereoSGBM()
+
+        elif matcher=="BM":
+            self.createStereoBM()
+
+        self.kernel = numpy.ones((3,3),numpy.uint8)
 
 
     def createDisparityWLSFilter(self):
@@ -359,23 +397,40 @@ class ImageProcessing(multiprocessing.Process):
                                                     cv2.COLOR_BGR2GRAY)
         self.grayImageR = cv2.cvtColor(self.undistortImageR, \
                                                     cv2.COLOR_BGR2GRAY)
-
-    
-    def computeDisparityMapLR(self):
-        """Compute the left and right disparity maps from current 
-        grayscale images"""
-        self.disparityMap = self.stereoL.compute(\
-                                        self.grayImageL, self.grayImageR)
-        self.disparityMapL = numpy.int16(self.disparityMap)
-        self.disparityMapR = numpy.int16(self.stereoR.compute(\
-                                        self.grayImageR, self.grayImageL))
     
 
     def computeDisparityMapL(self):
         """Compute the left disparity map from current grayscale 
         images"""
-        self.disparityMapL = self.stereoL.compute(\
+        self.disparityMap = self.stereoL.compute(\
                                         self.grayImageL, self.grayImageR)
+        self.disparityMapL = self.disparityMap
+
+    
+    def computeDisparityMapR(self):
+        """Compute the left disparity map from current grayscale 
+        images"""
+        self.disparityMapR = self.stereoR.compute(\
+                                        self.grayImageR, self.grayImageL)
+
+                            
+    def computeDisparityMapLR(self):
+        """Compute the left and right disparity maps from current 
+        grayscale images"""
+        self.computeDisparityMapL()
+        self.computeDisparityMapR()
+
+
+    def clampDisparity(self, minDisparity, numDisparities):
+        """Sets 0 for most distant object that can be detected"""
+        self.disparityMap = ((self.disparityMap.astype(numpy.float32)\
+                                    /16)-minDisparity)/numDisparities
+
+
+    def applyClosingFilter(self):
+        """Applies a closing filter to the disparity map"""
+        self.disparityMap = cv2.morphologyEx(\
+                    self.disparityMap, cv2.MORPH_CLOSE, self.kernel)    
 
 
     ### Methods to set context and start processes
