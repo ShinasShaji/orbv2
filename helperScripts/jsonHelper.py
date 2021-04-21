@@ -6,7 +6,7 @@ def dictToJson(dict, path):
     with open(path, "w") as jsonFile:
         json.dump(dict, jsonFile, sort_keys=True, indent=4)
         
-    print("Exported as ", path)
+    print("Exported as", path)
 
 
 def jsonToDict(path):
@@ -14,7 +14,7 @@ def jsonToDict(path):
     with open(path, "r") as jsonFile:
         dict = json.load(jsonFile)
         
-    print("Reading from ", path)
+    print("Reading from", path)
 
     return dict
 
