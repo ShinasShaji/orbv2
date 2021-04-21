@@ -35,12 +35,16 @@ class Calibrate:
         self.monoCalibrated = False
         self.stereoCalibrated = False
         self.stereoRectified = False
+        self.imageLoaded = False
 
         # StereoRectify
         self.rectifyScale = 1 # alpha; 1 to crop image; 0 to leave uncropped
 
         # Camera properties
         self.apertureSize = (3.84, 2.16) # (width, height) in mm
+
+        # Performance counter
+        self.perfCounter = [0, 0]
 
 
     def loadImagesForCalibration(self, imageFormat=".png", path="captures/calibrate"):
@@ -49,16 +53,50 @@ class Calibrate:
         self.path = path
         self.imageGlobL = sorted(glob.glob("".join([self.path, "/left_*", self.imageFormat])))
         self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_*", self.imageFormat])))
+        
+        # Counting number of images in directory
+        # Ensure that only required and matching images are stored here
+        self.imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
+        
+        if (self.imageCount%2)!=0:
+            print("Images are not paired")
+            self.imageLoaded = False
+        
+        else:
+            print("Found {} images in folder ({} image pairs)".format(\
+                                    self.imageCount, int(self.imageCount/2)))
+            self.imageLoaded = True
+
+    
+    def isImageLoaded(self):
+        """Check if images have been loaded"""
+        if self.imageLoaded:
+            return True
+
+        else:
+            print("Images not loaded")
+            return False  
 
 
-    def findCorners(self):
+    def startPerfCounter(self):
+        """Start an internal counter for evaluating performance. Stop with
+        stopPerfCounter()"""
+        self.perfCounter = [time.perf_counter(), 0]
+
+    
+    def returnPerfCounter(self):
+        """Stop internal counter and return elapsed time"""
+        self.perfCounter[1] = time.perf_counter()
+        return (self.perfCounter[1]-self.perfCounter[0])
+
+
+    def findCorners(self, previewDelay=500):
         """Find chessboard corners on images from folder"""
         self.monoCalibrated = False
 
-        # Counting number of images in directory
-        # Ensure that only required and matching images are stored here
-        imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
-        print("".join(["Found ", str(imageCount), " images in folder"]))
+        if not self.isImageLoaded():
+            return
+
         # Count of image pairs where chessboard was detected
         chessboardCount = 0
 
@@ -94,10 +132,10 @@ class Calibrate:
                 cv2.imshow('Chessboard_Left', self.imageL)
                 cv2.imshow('Chessboard_Right', self.imageR)
 
-                cv2.waitKey(500)
+                cv2.waitKey(previewDelay)
             
-        print("Chessboards were found in {} image pairs".format(\
-                                                    chessboardCount))
+        print("Chessboards were found in {} image pairs (out of {} image pairs)"\
+                            .format(chessboardCount, int(self.imageCount/2)))
 
         cv2.destroyAllWindows()
         
@@ -105,7 +143,7 @@ class Calibrate:
     def monoCalibrate(self):
         """Calculate camera matrix, distortion coefficients and rotation and 
         translation vectors"""
-        startTime = time.perf_counter()
+        self.startPerfCounter()
 
         # Left
         retValL, self.cameraMatrixL, self.distortionCoeffsL, \
@@ -134,8 +172,8 @@ class Calibrate:
 
         if retValL and retValR:
             self.monoCalibrated = True
-            print("Calibration completed in {:.5f} seconds".format(\
-                                            time.perf_counter()-startTime))
+            print("Mono calibration completed in {:.5f} seconds".format(\
+                                            self.returnPerfCounter()))
 
         else:
             self.monoCalibrated = False
@@ -261,7 +299,7 @@ class Calibrate:
         print("Total error (right): {}".format(meanError[1]/len(self.objectPoints)))
 
 
-    def undistortImages(self):
+    def undistortImages(self, previewDelay=500):
         """Undistort and preview images used for calibration"""
         if not self.isMonoCalibrated():
             return
@@ -281,7 +319,7 @@ class Calibrate:
             cv2.imshow('UndistortedImageL', undistortImageL)
             cv2.imshow('UndistortedImageR', undistortImageR)
 
-            cv2.waitKey(500)
+            cv2.waitKey(previewDelay)
 
         cv2.destroyAllWindows()
 
@@ -309,6 +347,8 @@ class Calibrate:
         # Intrinsic camara matrices are fixed; only Rotation, Translation
         # Essential, and Fundamental matrices are calculated
 
+        self.startPerfCounter()
+
         retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
         self.cameraMatrixR, self.distortionCoeffsR, \
         self.stereoRotationMatrix, self.stereoTranslationMatrix, \
@@ -322,7 +362,8 @@ class Calibrate:
 
         if retValStereo:
             self.stereoCalibrated = True
-            print("Stereo calibration complete")
+            print("Stereo calibration completed in {:.5f} seconds".format(\
+                                                self.returnPerfCounter()))
         
         else:
             self.stereoCalibrated = False
@@ -371,7 +412,11 @@ class Calibrate:
         """Computes rotation (3x3) and projection matrices (3x4) for each 
         camera, the Q matrix, and valid regions of interest. The Q matrix 
         is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
-        in the rectified coordinate frame."""
+        in the rectified coordinate frame"""
+        if not self.isStereoCalibrated():
+            return
+
+        # Stereo rectification
         self.rotationMatrixL, self.rotationMatrixR, self.projectionMatrixL,\
         self.projectionMatrixR, self.dispToDepthMatrix, roiL, roiR = \
             cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
@@ -379,6 +424,8 @@ class Calibrate:
                 self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
                 self.stereoTranslationMatrix, alpha=self.rectifyScale, \
                 newImageSize=(0,0))
+
+        self.stereoRectified = True
 
 
     def isStereoRectified(self):
