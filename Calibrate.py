@@ -1,6 +1,7 @@
 import fnmatch
 import glob
 import os
+import time
 
 import cv2
 import numpy as np
@@ -58,8 +59,10 @@ class Calibrate:
         # Ensure that only required and matching images are stored here
         imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
         print("".join(["Found ", str(imageCount), " images in folder"]))
+        # Count of image pairs where chessboard was detected
+        chessboardCount = 0
 
-        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
+        for fileNameL, fileNameR in zip(self.imageGlobL, self.imageGlobR):
             # Reading left and right images
             self.imageL = cv2.imread(fileNameL)
             self.imageR = cv2.imread(fileNameR)
@@ -74,6 +77,8 @@ class Calibrate:
 
             # If found, add object points, image points (after refining them)
             if retValL and retValR:
+                chessboardCount += 1
+
                 self.objectPoints.append(self.objectPointPrep)
 
                 cornersL = cv2.cornerSubPix(self.grayImageL, cornersL, (11,11), (-1,-1), self.cornerSubPixCriteria)
@@ -90,6 +95,9 @@ class Calibrate:
                 cv2.imshow('Chessboard_Right', self.imageR)
 
                 cv2.waitKey(500)
+            
+        print("Chessboards were found in {} image pairs".format(\
+                                                    chessboardCount))
 
         cv2.destroyAllWindows()
         
@@ -97,6 +105,8 @@ class Calibrate:
     def monoCalibrate(self):
         """Calculate camera matrix, distortion coefficients and rotation and 
         translation vectors"""
+        startTime = time.perf_counter()
+
         # Left
         retValL, self.cameraMatrixL, self.distortionCoeffsL, \
             self.rotationVecsL, self.translationVecsL = \
@@ -124,7 +134,8 @@ class Calibrate:
 
         if retValL and retValR:
             self.monoCalibrated = True
-            print("Calibration complete")
+            print("Calibration completed in {:.5f} seconds".format(\
+                                            time.perf_counter()-startTime))
 
         else:
             self.monoCalibrated = False
@@ -255,20 +266,20 @@ class Calibrate:
         if not self.isMonoCalibrated():
             return
 
-        for (fileNameL, fileNameR) in (self.imageGlobL, self.imageGlobR):
+        for fileNameL, fileNameR in zip(self.imageGlobL, self.imageGlobR):
             # Reading left and right images
             self.imageL = cv2.imread(fileNameL)
             self.imageR = cv2.imread(fileNameR)
 
             # Left
-            undistortedImageL = cv2.undistort(self.imageL, self.cameraMatrixL, \
+            undistortImageL = cv2.undistort(self.imageL, self.cameraMatrixL, \
                 self.distortionCoeffsL, None, self.cameraMatrixL)
             # Right
-            undistortedImageR = cv2.undistort(self.imageR, self.cameraMatrixR, \
+            undistortImageR = cv2.undistort(self.imageR, self.cameraMatrixR, \
                 self.distortionCoeffsR, None, self.cameraMatrixR)
 
-            cv2.imshow('UndistortedImageL', undistortedImageL)
-            cv2.imshow('UndistortedImageR', undistortedImageR)
+            cv2.imshow('UndistortedImageL', undistortImageL)
+            cv2.imshow('UndistortedImageR', undistortImageR)
 
             cv2.waitKey(500)
 
