@@ -1,10 +1,10 @@
 import multiprocessing
 import os
 import time
+import fnmatch
 
 import cv2
 import numpy
-from numpy.core.shape_base import block
 
 from helperScripts import jsonHelper
 
@@ -15,8 +15,9 @@ class ImageProcessing(multiprocessing.Process):
         super(ImageProcessing, self).__init__()
 
         # Capture details
-        self.imageCounter = 0
         self.capturePath = "captures/"
+        self.imageCounter = int(len(fnmatch.filter(os.listdir(\
+                                        self.capturePath), '*.png'))/2)
 
         # Flags
         # Capture link
@@ -342,7 +343,7 @@ class ImageProcessing(multiprocessing.Process):
 
     
     def createStereoMatcher(self, matcher=None):
-        """Create StereoBM or StereoSGBM matcher objects"""
+        """Create StereoBM "BM" or StereoSGBM "SGBM" matcher objects"""
         assert matcher is not None, "No matcher specified"
 
         if matcher=="SGBM":
