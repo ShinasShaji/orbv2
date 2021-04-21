@@ -1,0 +1,26 @@
+{
+    "left": {
+        "aspectRatio": 1.002174268302331,
+        "fieldOfView": {
+            "horizontal": 57.024955122795404,
+            "vertical": 33.915999341587444
+        },
+        "focalLength": 3.534044031076635,
+        "principalPoint": [
+            1.958291313179552,
+            1.0972239583301997
+        ]
+    },
+    "right": {
+        "aspectRatio": 1.003483202528414,
+        "fieldOfView": {
+            "horizontal": 56.55496275427264,
+            "vertical": 33.556060657851475
+        },
+        "focalLength": 3.5689271806513307,
+        "principalPoint": [
+            1.9545650968090493,
+            1.1336812656833202
+        ]
+    }
+}
