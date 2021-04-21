@@ -7,6 +7,8 @@ class ProcessManager():
         self.stereoCapture = StereoCapture()
         self.imageProcessing = ImageProcessing()
 
+        self.possibleContexts = ["preview", "previewDisparity"]
+
 
     def prepareCapturePipeline(self):
         """References bufers and events required for capture"""
@@ -23,7 +25,13 @@ class ProcessManager():
     def runProcesses(self, context=None):
         """Start processes based on context"""
         assert context is not None, "No context provided"
-        self.context = context
+        
+        if context in self.possibleContexts:
+            self.context = context
+
+        else:
+            print("Invalid context")
+            return
 
         # Capture pipeline is prepared regardless of context
         self.prepareCapturePipeline()
@@ -51,11 +59,8 @@ class ProcessManager():
             self.stereoCapture.join()
             self.imageProcessing.join()
 
-        else:
-            print("Invalid context")
-
 
 
 if __name__=="__main__":
     processManager = ProcessManager()
-    processManager.runProcesses("previewDisparity")
+    processManager.runProcesses("preview")
