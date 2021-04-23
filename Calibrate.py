@@ -47,7 +47,7 @@ class Calibrate:
         self.perfCounter = [0, 0]
 
 
-    def loadImagesForCalibration(self, imageFormat=".png", path="captures/calibrate"):
+    def loadImagesForCalibration(self, imageFormat=".png", path="captures"):
         """Loads images of specified format from path for calibration"""
         self.imageFormat = imageFormat
         self.path = path
@@ -324,7 +324,7 @@ class Calibrate:
         cv2.destroyAllWindows()
 
 
-    def stereoCalibrate(self):
+    def stereoCalibrate(self, useOptimalMatrix=False):
         """Calibrate camera pair with respect to each other. Check code to 
         modify flags"""
         if not self.isMonoCalibrated():
@@ -349,14 +349,22 @@ class Calibrate:
 
         self.startPerfCounter()
 
+        if useOptimalMatrix:
+            cameraMatrixL = self.optimalCameraMatrixL
+            cameraMatrixR = self.optimalCameraMatrixR
+
+        else:
+            cameraMatrixL = self.cameraMatrixL
+            cameraMatrixR = self.cameraMatrixR
+
         retValStereo, self.cameraMatrixL, self.distortionCoeffsL, \
         self.cameraMatrixR, self.distortionCoeffsR, \
         self.stereoRotationMatrix, self.stereoTranslationMatrix, \
         self.essentialMatrix, self.fundamentalMatrix = \
             cv2.stereoCalibrate(self.objectPoints, \
                 self.imagePointsL, self.imagePointsR, \
-                self.cameraMatrixL, self.distortionCoeffsL, \
-                self.cameraMatrixR, self.distortionCoeffsR, \
+                cameraMatrixL, self.distortionCoeffsL, \
+                cameraMatrixR, self.distortionCoeffsR, \
                 self.grayImageL.shape[::-1], criteria=self.stereoCriteria, \
                 flags=flags)
 
