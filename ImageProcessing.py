@@ -139,18 +139,51 @@ class ImageProcessing(multiprocessing.Process):
         cv2.destroyAllWindows()
 
     
+    def previewUndistortCapture(self):
+        """Previews capture, undistorted. Event managed"""
+        if not self.isCapturePipelineReady():
+            return
+
+        self.loadMonoCalibrationResults()
+        self.loadStereoCalibration()
+        self.loadStereoRectify()
+        self.initUndistortRectifyMap()
+
+        while not self.quitEvent.is_set():
+            self.pollCapture()
+
+            self.undistortRectifyRemap()
+
+            cv2.imshow("Undistorted_Left", self.undistortImageL)
+            cv2.imshow("Undistorted_Right", self.undistortImageR)
+
+            key = cv2.waitKey(20)
+            if key == 27: # Exit on ESC
+                print("Exiting preview")
+                self.quitEvent.set()
+                break
+            
+        cv2.destroyAllWindows()
+
+    
     def previewDisparity(self):
         """Compute and preview disparity map"""
         if not self.isCapturePipelineReady():
             return
 
+        self.loadMonoCalibrationResults()
+        self.loadStereoCalibration()
+        self.loadStereoRectify()
         self.createStereoMatcher("SGBM")
+        self.initUndistortRectifyMap()
 
         while not self.quitEvent.is_set():
             self.pollCapture()
 
-            self.convertCaptureToGrayscale()
-            self.computeDisparityMapL()
+            self.undistortRectifyRemap()
+            #self.convertCaptureToGrayscale()
+            self.convertUndistortToGrayscale()
+            self.computeDisparityMapLR()
             self.clampDisparity(2, 128)
             self.applyClosingFilter()
 
@@ -240,13 +273,15 @@ class ImageProcessing(multiprocessing.Process):
         self.rectifyScale = dataDict["alpha"]
 
         # Image size
-        self.grayImageSizeL = dataDict["grayImageSizeL"]
-        self.grayImageSizeR = dataDict["grayImageSizeR"]
+        self.grayImageSizeL = tuple(dataDict["grayImageSizeL"])
+        self.grayImageSizeR = tuple(dataDict["grayImageSizeR"])
 
-        self.imageSizeL = dataDict["imageSizeL"]
-        self.imageSizeR = dataDict["imageSizeR"]
+        self.imageSizeL = tuple(dataDict["imageSizeL"])
+        self.imageSizeR = tuple(dataDict["imageSizeR"])
 
-        self.stereoCalibrationLoaded = False
+        print("Loaded stereo calibration")
+
+        self.stereoCalibrationLoaded = True
 
 
     def loadStereoRectify(self, path="data/stereoRectify.json"):
@@ -448,6 +483,9 @@ class ImageProcessing(multiprocessing.Process):
 
         elif self.context=="previewDisparity":
             self.previewDisparity()
+
+        elif self.context=="undistortPreview":
+            self.previewUndistortCapture()
 
 
 
