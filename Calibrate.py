@@ -37,9 +37,6 @@ class Calibrate:
         self.stereoRectified = False
         self.imageLoaded = False
 
-        # StereoRectify
-        self.rectifyScale = 1 # alpha; 1 to crop image; 0 to leave uncropped
-
         # Camera properties
         self.apertureSize = (3.84, 2.16) # (width, height) in mm
 
@@ -133,6 +130,11 @@ class Calibrate:
                 cv2.imshow('Chessboard_Right', self.imageR)
 
                 cv2.waitKey(previewDelay)
+
+            else:
+                print("Chessboards not found in pair: {}, {}".format(\
+                    fileNameL.replace("".join([self.path, "/"]), ""), \
+                    fileNameR.replace("".join([self.path, "/"]), "")))
             
         print("Chessboards were found in {} image pairs (out of {} image pairs)"\
                             .format(chessboardCount, int(self.imageCount/2)))
@@ -409,18 +411,18 @@ class Calibrate:
             "grayImageSizeL":self.grayImageL.shape,
             "grayImageSizeR":self.grayImageR.shape,
             "imageSizeL":self.imageL.shape,
-            "imageSizeR":self.imageR.shape,
-            "alpha":self.rectifyScale
+            "imageSizeR":self.imageR.shape
         }
 
         jsonHelper.dictToJson(results, path)
 
 
-    def stereoRectify(self):
+    def stereoRectify(self, rectifyScale=1):
         """Computes rotation (3x3) and projection matrices (3x4) for each 
         camera, the Q matrix, and valid regions of interest. The Q matrix 
         is a 4×4 disparity-to-depth mapping matrix. Projection matrices are
-        in the rectified coordinate frame"""
+        in the rectified coordinate frame. Specify rectifyScale to crop
+        unwanted pixels; does not crop by default"""
         if not self.isStereoCalibrated():
             return
 
@@ -430,7 +432,7 @@ class Calibrate:
             cv2.stereoRectify(self.cameraMatrixL, self.distortionCoeffsL, \
                 self.cameraMatrixR, self.distortionCoeffsR, \
                 self.grayImageL.shape[::-1], self.stereoRotationMatrix, \
-                self.stereoTranslationMatrix, alpha=self.rectifyScale, \
+                self.stereoTranslationMatrix, alpha=rectifyScale, \
                 newImageSize=(0,0))
 
         self.stereoRectified = True
