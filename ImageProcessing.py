@@ -174,18 +174,19 @@ class ImageProcessing(multiprocessing.Process):
         self.loadMonoCalibrationResults()
         self.loadStereoCalibration()
         self.loadStereoRectify()
-        self.createStereoMatcher("SGBM")
+        self.createStereoMatcher("BM")
         self.initUndistortRectifyMap()
+        self.createDisparityWLSFilter()
+
 
         while not self.quitEvent.is_set():
             self.pollCapture()
 
-            self.undistortRectifyRemap()
-            #self.convertCaptureToGrayscale()
-            self.convertUndistortToGrayscale()
+            self.convertCaptureToGrayscale()
+            self.undistortRectifyRemapGray()
             self.computeDisparityMapLR()
-            self.clampDisparity(2, 128)
-            self.applyClosingFilter()
+            self.applyWLSFilterDisparity()
+            self.clampDisparity(2, 96)
 
             cv2.imshow("Disparity", self.disparityMap)
 
@@ -270,7 +271,6 @@ class ImageProcessing(multiprocessing.Process):
 
         self.essentialMatrix = numpy.array(dataDict["essentialMatrix"]) 
         self.fundamentalMatrix = numpy.array(dataDict["fundamentalMatrix"])
-        self.rectifyScale = dataDict["alpha"]
 
         # Image size
         self.grayImageSizeL = tuple(dataDict["grayImageSizeL"])
@@ -342,12 +342,12 @@ class ImageProcessing(multiprocessing.Process):
         # Parameters
         blockSize = 3
         minDisparity = 2
-        numDisparities = 130 - minDisparity
+        numDisparities = 96 - minDisparity
         penalty1 = 8*3*blockSize**2
         penalty2 = 32*3*blockSize**2
         uniquenessRatio = 10
-        speckleWindowSize = 100
-        speckleRange = 32
+        speckleWindowSize = 50
+        speckleRange = 2
         disp12MaxDiff = 5
         
         # Creating StereoSGBM matchers
@@ -367,7 +367,7 @@ class ImageProcessing(multiprocessing.Process):
     def createStereoBM(self):
         """Create Stereo BM matchers"""
         # Parameters
-        numDisparities = 80
+        numDisparities = 96
         blockSize = 21
 
         self.stereoL = cv2.StereoBM_create(\
@@ -399,12 +399,12 @@ class ImageProcessing(multiprocessing.Process):
         visualMultiplier = 1.0
 
         # Creating filter
-        wls_filter = cv2.ximgproc.createDisparityWLSFilter(\
+        self.wlsFilter = cv2.ximgproc.createDisparityWLSFilter(\
                                             matcher_left=self.stereoL)
         
         # Setting parameters
-        wls_filter.setLambda(lmbda)
-        wls_filter.setSigmaColor(sigma)
+        self.wlsFilter.setLambda(lmbda)
+        self.wlsFilter.setSigmaColor(sigma)
 
     
     def undistortRectifyRemap(self):
@@ -418,6 +418,20 @@ class ImageProcessing(multiprocessing.Process):
         # Right
         self.undistortImageR= cv2.remap(\
             self.imageR, self.undistortMapR[0], self.undistortMapR[1], \
+            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+
+    
+    def undistortRectifyRemapGray(self):
+        """Calls remap on the images using undistortMaps to undistort and
+        rectify image pair"""
+        # Left
+        self.grayImageL = cv2.remap(\
+            self.grayImageL, self.undistortMapL[0], self.undistortMapL[1], \
+            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+
+        # Right
+        self.grayImageR = cv2.remap(\
+            self.grayImageR, self.undistortMapR[0], self.undistortMapR[1], \
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
     
@@ -440,14 +454,14 @@ class ImageProcessing(multiprocessing.Process):
         images"""
         self.disparityMap = self.stereoL.compute(\
                                         self.grayImageL, self.grayImageR)
-        self.disparityMapL = self.disparityMap
+        self.disparityMapL = numpy.int16(self.disparityMap)
 
     
     def computeDisparityMapR(self):
         """Compute the left disparity map from current grayscale 
         images"""
-        self.disparityMapR = self.stereoR.compute(\
-                                        self.grayImageR, self.grayImageL)
+        self.disparityMapR = numpy.int16(self.stereoR.compute(\
+                                        self.grayImageR, self.grayImageL))
 
                             
     def computeDisparityMapLR(self):
@@ -455,6 +469,12 @@ class ImageProcessing(multiprocessing.Process):
         grayscale images"""
         self.computeDisparityMapL()
         self.computeDisparityMapR()
+
+
+    def applyWLSFilterDisparity(self):
+        """Apply created WLS disparity filter on disparity maps"""
+        self.disparityMap = self.wlsFilter.filter(self.disparityMapL, \
+                self.grayImageL, disparity_map_right=self.disparityMapR)     
 
 
     def clampDisparity(self, minDisparity, numDisparities):

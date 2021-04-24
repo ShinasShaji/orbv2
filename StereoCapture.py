@@ -46,6 +46,7 @@ class StereoCapture(multiprocessing.Process):
 
         # Flags
         self.bufferReady = False
+        self.denoise = False
 
 
     def checkOpen(self):
@@ -138,6 +139,10 @@ class StereoCapture(multiprocessing.Process):
         retRight, self.imageR[:] = self.rightCam.retrieve()
 
         if retLeft and retRight:
+            # Denoise if flag set
+            if self.denoise:
+                self.denoiseSingleColor()
+
             self.actualFrameTime = time.time() - self.previousTime
             self.remainingTime = self.frameTime - self.actualFrameTime
 
@@ -148,7 +153,7 @@ class StereoCapture(multiprocessing.Process):
             return False
 
 
-    def capture(self):
+    def capture(self, denoise=False):
         """Capture images from camera pair"""
         # Check if camera and buffers have initialized
         if not self.checkOpen() or not self.isBufferReady():
@@ -174,6 +179,19 @@ class StereoCapture(multiprocessing.Process):
         
         self.leftCam.release()
         self.rightCam.release()
+
+
+    def setDenoise(self, denoise):
+        """Enable or disable denoising"""
+        self.denoise = denoise
+
+    
+    def denoiseSingleColor(self):
+        """Perform denoising on single color image"""
+        self.imageL[:] = cv2.fastNlMeansDenoisingColored(self.imageL, \
+            None, 10, 10, 7, 21)
+        self.imageR[:] = cv2.fastNlMeansDenoisingColored(self.imageR, \
+            None, 10, 10, 7, 21)
 
         
     def run(self):
