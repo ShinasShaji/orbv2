@@ -8,14 +8,15 @@ import numpy
 
 class StereoCapture(multiprocessing.Process):
     """Class to handle capture from stereo camera setup"""
-    def __init__(self, cameraID=(2,0), imageSize=(1280/2,720/2), fps=4):
+    def __init__(self, cameraID=(0,2), imageSize=(1280/2,720/2), fps=4, vertical=True):
         super(StereoCapture, self).__init__()
 
         # Camera IDs and properties
-        self.leftID = cameraID[0]
-        self.rightID = cameraID[1]
+        self.leftID = cameraID[0]   # or top
+        self.rightID = cameraID[1]  # or bottom
         self.imageSize = imageSize
         self.fps = fps
+        self.vertical = vertical
 
         # Seting up capture objects
         self.leftCam = cv2.VideoCapture(self.leftID)
@@ -47,6 +48,7 @@ class StereoCapture(multiprocessing.Process):
         # Flags
         self.bufferReady = False
         self.denoise = False
+        self.verbose = False
 
 
     def checkOpen(self):
@@ -164,18 +166,24 @@ class StereoCapture(multiprocessing.Process):
 
             if self.quitEvent.is_set():
                 break     
-                
-            print("Capture time: {:.5f}  Frame time: {:.5f}  "\
-                .format(self.captureTime[0], self.actualFrameTime), end="")
-            print("Remaining time: {:.5f}  Frame is:"\
-                .format(self.remainingTime), end=" ")
+            
+            if self.verbose:
+                print("Capture time: {:.5f}  Frame time: {:.5f}  "\
+                    .format(self.captureTime[0], self.actualFrameTime), \
+                    end="")
+                print("Remaining time: {:.5f}  Frame is:"\
+                    .format(self.remainingTime), end=" ")
 
-            if self.remainingTime<0:
-                print("late")
+                if self.remainingTime<0:
+                    print("late")
 
+                else:
+                    print("on time")
+                    time.sleep(self.remainingTime)
+            
             else:
-                print("on time")
-                time.sleep(self.remainingTime) 
+                if self.remainingTime>0:
+                    time.sleep(self.remainingTime)
         
         self.leftCam.release()
         self.rightCam.release()
