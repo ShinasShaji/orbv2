@@ -1,7 +1,7 @@
+import datetime
 import multiprocessing
 import os
 import time
-import fnmatch
 
 import cv2
 import numpy
@@ -11,15 +11,16 @@ from helperScripts import jsonHelper
 
 class ImageProcessing(multiprocessing.Process):
     """Class to handle image processing on capture stream"""
-    def __init__(self):
+    def __init__(self, vertical=True):
         super(ImageProcessing, self).__init__()
 
         # Capture details
         self.capturePath = "captures/"
-        self.imageCounter = int(len(fnmatch.filter(os.listdir(\
-                                        self.capturePath), '*.png'))/2)
 
         # Flags
+        # Vertical or horizontal stereo rig
+        self.vertical = vertical
+
         # Capture link
         self.captureBufferReady = False
         self.captureEventReady = False
@@ -100,14 +101,18 @@ class ImageProcessing(multiprocessing.Process):
 
     def captureImages(self):
         """Capture and save images from both cameras"""
-        for (camera, frame) in \
-            [("left", self.imageL), ("right", self.imageR)]:
+        if self.vertical:
+            fileNames = [("top", self.imageL), ("bottom", self.imageR)]
+        
+        else:
+            fileNames = [("left", self.imageL), ("right", self.imageR)]
 
-            imageName = "".join([camera, "_{}.png".format(self.imageCounter)])
+        timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
+
+        for (camera, frame) in fileNames:
+            imageName = "".join([camera, "_{}.png".format(timeString)])
             cv2.imwrite(os.path.join(self.capturePath, imageName), frame)
             print("Captured {}".format(imageName))
-
-        self.imageCounter += 1
 
     
     def pollCapture(self):
@@ -122,11 +127,16 @@ class ImageProcessing(multiprocessing.Process):
         if not self.isCapturePipelineReady():
             return
 
+        if self.vertical:
+            windowNames = ["Top", "Bottom"]
+        else:
+            windowNames = ["Left", "Right"]
+
         while not self.quitEvent.is_set():
             self.pollCapture()
 
-            cv2.imshow("Left", self.imageL)
-            cv2.imshow("Right", self.imageR)
+            cv2.imshow(windowNames[0], self.imageL)
+            cv2.imshow(windowNames[1], self.imageR)
 
             key = cv2.waitKey(20)
             if key == 27: # Exit on ESC
@@ -137,6 +147,34 @@ class ImageProcessing(multiprocessing.Process):
                 self.captureImages()
             
         cv2.destroyAllWindows()
+
+
+    def drawUndistortHorEpipolarLines(self):
+        """Returns image with horizontal epipolar lines drawn to confirm 
+        rectification"""
+        epipolarImageL = self.undistortImageL.copy()
+        epipolarImageR = self.undistortImageR.copy()
+
+        for line in range(0, int(self.undistortImageL.shape[0]/20)): 
+                epipolarImageL[line*20,:]= (0,255,0)
+                epipolarImageR[line*20,:]= (0,255,0)
+
+        return numpy.hstack([epipolarImageL, \
+                                            epipolarImageR])
+
+
+    def drawUndistortVertEpipolarLines(self):
+        """Returns image with vertical epipolar lines drawn to confirm 
+        rectification"""
+        epipolarImageL = self.undistortImageL.copy()
+        epipolarImageR = self.undistortImageR.copy()
+
+        for line in range(0, int(self.undistortImageL.shape[1]/20)): 
+                epipolarImageL[:,line*20]= (0,255,0)
+                epipolarImageR[:,line*20]= (0,255,0)
+
+        return numpy.vstack([epipolarImageL, \
+                                            epipolarImageR])
 
     
     def previewUndistortCapture(self):
@@ -149,13 +187,24 @@ class ImageProcessing(multiprocessing.Process):
         self.loadStereoRectify()
         self.initUndistortRectifyMap()
 
+        if self.vertical:
+            windowNames = ["Undistorted_Top", "Undistorted_Bottom"]
+        else:
+            windowNames = ["Undistorted_Left", "Undistorted_Right"]
+
         while not self.quitEvent.is_set():
             self.pollCapture()
 
             self.undistortRectifyRemap()
 
-            cv2.imshow("Undistorted_Left", self.undistortImageL)
-            cv2.imshow("Undistorted_Right", self.undistortImageR)
+            cv2.imshow(windowNames[0], self.undistortImageL)
+            cv2.imshow(windowNames[1], self.undistortImageR)
+
+            # Draw epipolar lines to check rectification
+            cv2.imshow("Vertical_Epipolar", \
+                                self.drawUndistortVertEpipolarLines())
+            cv2.imshow("Horizontal_Epipolar", \
+                                self.drawUndistortHorEpipolarLines())
 
             key = cv2.waitKey(20)
             if key == 27: # Exit on ESC
@@ -174,9 +223,8 @@ class ImageProcessing(multiprocessing.Process):
         self.loadMonoCalibrationResults()
         self.loadStereoCalibration()
         self.loadStereoRectify()
-        self.createStereoMatcher("BM")
+        self.createStereoMatcher("SGBM")
         self.initUndistortRectifyMap()
-        self.createDisparityWLSFilter()
 
 
         while not self.quitEvent.is_set():
@@ -184,9 +232,12 @@ class ImageProcessing(multiprocessing.Process):
 
             self.convertCaptureToGrayscale()
             self.undistortRectifyRemapGray()
-            self.computeDisparityMapLR()
-            self.applyWLSFilterDisparity()
-            self.clampDisparity(2, 96)
+
+            self.rotateGrayCC90()
+            self.computeDisparityMapL()
+            self.rotateDisparityC90()
+
+            self.clampDisparity(2, 32)
 
             cv2.imshow("Disparity", self.disparityMap)
 
@@ -342,7 +393,7 @@ class ImageProcessing(multiprocessing.Process):
         # Parameters
         blockSize = 3
         minDisparity = 2
-        numDisparities = 96 - minDisparity
+        numDisparities = 32 - minDisparity
         penalty1 = 8*3*blockSize**2
         penalty2 = 32*3*blockSize**2
         uniquenessRatio = 10
@@ -463,12 +514,42 @@ class ImageProcessing(multiprocessing.Process):
         self.disparityMapR = numpy.int16(self.stereoR.compute(\
                                         self.grayImageR, self.grayImageL))
 
+    
+    def rotateGrayCC90(self):
+        """Rotate current grayscale images by 90 degress counterclockwise"""
+        self.grayImageL = cv2.rotate(self.grayImageL, \
+                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
+        self.grayImageR = cv2.rotate(self.grayImageR, \
+                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
+
                             
     def computeDisparityMapLR(self):
         """Compute the left and right disparity maps from current 
         grayscale images"""
         self.computeDisparityMapL()
         self.computeDisparityMapR()
+
+
+    def rotateDisparityC90(self):
+        """Rotate current disparity image by 90 degrees clockwise"""
+        try:
+            self.disparityMap = cv2.rotate(self.disparityMap, \
+                                        cv2.ROTATE_90_CLOCKWISE)
+            self.disparityMapL = cv2.rotate(self.disparityMapL, \
+                                        cv2.ROTATE_90_CLOCKWISE)
+            self.disparityMapR = cv2.rotate(self.disparityMapR, \
+                                        cv2.ROTATE_90_CLOCKWISE)
+        
+        except:
+            pass
+
+                                
+    def rotateGrayC90(self):
+        """Rotate current grayscale images by 90 degress clockwise"""
+        self.grayImageL = cv2.rotate(self.grayImageL, \
+                                        cv2.ROTATE_90_CLOCKWISE)
+        self.grayImageR = cv2.rotate(self.grayImageR, \
+                                        cv2.ROTATE_90_CLOCKWISE)
 
 
     def applyWLSFilterDisparity(self):
