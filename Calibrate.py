@@ -48,21 +48,30 @@ class Calibrate:
         """Loads images of specified format from path for calibration"""
         self.imageFormat = imageFormat
         self.path = path
-        self.imageGlobL = sorted(glob.glob("".join([self.path, "/left_*", self.imageFormat])))
-        self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_*", self.imageFormat])))
-        
+        try:
+            self.imageGlobL = sorted(glob.glob("".join([self.path, "/left_*", self.imageFormat])))
+            self.imageGlobR = sorted(glob.glob("".join([self.path, "/right_*", self.imageFormat])))
+
+            if len(self.imageGlobL)==0 or len(self.imageGlobR)==0:
+                raise FileNotFoundError
+            
+            self.vertical = False
+
+        except:
+            self.imageGlobL = sorted(glob.glob("".join([self.path, "/top_*", self.imageFormat])))
+            self.imageGlobR = sorted(glob.glob("".join([self.path, "/bottom_*", self.imageFormat])))
+
+            self.vertical = True
+
         # Counting number of images in directory
         # Ensure that only required and matching images are stored here
         self.imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
         
-        if (self.imageCount%2)!=0:
-            print("Images are not paired")
-            self.imageLoaded = False
+        assert (self.imageCount%2)==0, "Unpaired images exist in folder"
         
-        else:
-            print("Found {} images in folder ({} image pairs)".format(\
-                                    self.imageCount, int(self.imageCount/2)))
-            self.imageLoaded = True
+        print("Found {} images in folder ({} image pairs)".format(\
+                                self.imageCount, int(self.imageCount/2)))
+        self.imageLoaded = True
 
     
     def isImageLoaded(self):
@@ -82,7 +91,7 @@ class Calibrate:
 
     
     def returnPerfCounter(self):
-        """Stop internal counter and return elapsed time"""
+        """Stop internal perf_counter and return elapsed time"""
         self.perfCounter[1] = time.perf_counter()
         return (self.perfCounter[1]-self.perfCounter[0])
 
