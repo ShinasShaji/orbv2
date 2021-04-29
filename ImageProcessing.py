@@ -156,29 +156,29 @@ class ImageProcessing(multiprocessing.Process):
         cv2.destroyAllWindows()
 
 
-    def drawUndistortHorEpipolarLines(self):
+    def drawHorEpipolarLines(self, undistortImageL, undistortImageR):
         """Returns image with horizontal epipolar lines drawn to confirm 
         rectification"""
-        epipolarImageL = self.undistortImageL.copy()
-        epipolarImageR = self.undistortImageR.copy()
+        epipolarImageL = undistortImageL.copy()
+        epipolarImageR = undistortImageR.copy()
 
-        for line in range(0, int(self.undistortImageL.shape[0]/20)): 
-                epipolarImageL[line*20,:]= (0,255,0)
-                epipolarImageR[line*20,:]= (0,255,0)
+        for line in range(0, int(undistortImageL.shape[0]/20)): 
+                epipolarImageL[line*20,:]= 255
+                epipolarImageR[line*20,:]= 255
 
         return numpy.hstack([epipolarImageL, \
                                             epipolarImageR])
 
 
-    def drawUndistortVertEpipolarLines(self):
+    def drawVertEpipolarLines(self, undistortImageL, undistortImageR):
         """Returns image with vertical epipolar lines drawn to confirm 
         rectification"""
-        epipolarImageL = self.undistortImageL.copy()
-        epipolarImageR = self.undistortImageR.copy()
+        epipolarImageL = undistortImageL.copy()
+        epipolarImageR = undistortImageR.copy()
 
-        for line in range(0, int(self.undistortImageL.shape[1]/20)): 
-                epipolarImageL[:,line*20]= (0,255,0)
-                epipolarImageR[:,line*20]= (0,255,0)
+        for line in range(0, int(undistortImageL.shape[1]/20)): 
+                epipolarImageL[:,line*20]= 255
+                epipolarImageR[:,line*20]= 255
 
         return numpy.vstack([epipolarImageL, \
                                             epipolarImageR])
@@ -202,16 +202,18 @@ class ImageProcessing(multiprocessing.Process):
         while not self.quitEvent.is_set():
             self.pollCapture()
 
-            self.undistortRectifyRemap()
+            self.undistortRectifyRemap(self.imageL, self.imageR)
 
             cv2.imshow(windowNames[0], self.undistortImageL)
             cv2.imshow(windowNames[1], self.undistortImageR)
 
             # Draw epipolar lines to check rectification
             cv2.imshow("Vertical_Epipolar", \
-                                self.drawUndistortVertEpipolarLines())
+                self.drawVertEpipolarLines(self.undistortImageL, \
+                                            self.undistortImageR))
             cv2.imshow("Horizontal_Epipolar", \
-                                self.drawUndistortHorEpipolarLines())
+                self.drawHorEpipolarLines(self.undistortImageL, \
+                                            self.undistortImageR))
 
             key = cv2.waitKey(20)
             if key == 27: # Exit on ESC
@@ -241,23 +243,33 @@ class ImageProcessing(multiprocessing.Process):
             self.pollCapture()
 
             self.convertCaptureToGrayscale()
-            self.undistortRectifyRemapGray()
+            self.undistortRectifyRemap(self.grayImageL, self.grayImageR)
 
             self.StereoMatcher.computeDisparity(\
-                grayImageL=self.grayImageL, grayImageR=self.grayImageR)
+                grayImageL=self.undistortImageL, \
+                grayImageR=self.undistortImageR)
 
             self.StereoMatcher.clampDisparity()
             self.StereoMatcher.applyClosingFilter()
 
             cv2.imshow("Disparity", self.StereoMatcher.disparityMapL)
 
+            if self.vertical:
+                cv2.imshow("Horizontal_Epipolar", \
+                    self.drawHorEpipolarLines(self.undistortImageL, \
+                        self.undistortImageR))
+            else:
+                cv2.imshow("Vertical_Epipolar", \
+                    self.drawVertEpipolarLines(self.undistortImageL, \
+                        self.undistortImageR))
+
             if self.verbose:
                 print("Disparity compute time: {:.5f}"\
                     .format(time.time()-self.pickupTime))
 
-            key = cv2.waitKey(20)
-            if key == 27: # Exit on ESC
-                print("Exiting disparity preview")
+            if self.StereoMatcher.tuneParameters():
+                self.StereoMatcher.createMatcher()
+            else:
                 self.quitEvent.set()
                 break
 
@@ -398,31 +410,17 @@ class ImageProcessing(multiprocessing.Process):
                 self.grayImageSizeR[::-1], cv2.CV_16SC2)
 
     
-    def undistortRectifyRemap(self):
-        """Calls remap on the images using undistortMaps to undistort and
-        rectify image pair"""
+    def undistortRectifyRemap(self, imageL, imageR):
+        """Calls remap on passed images using undistortMaps to undistort 
+        and rectify image pair"""
         # Left
         self.undistortImageL = cv2.remap(\
-            self.imageL, self.undistortMapL[0], self.undistortMapL[1], \
+            imageL, self.undistortMapL[0], self.undistortMapL[1], \
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
         # Right
         self.undistortImageR= cv2.remap(\
-            self.imageR, self.undistortMapR[0], self.undistortMapR[1], \
-            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-
-    
-    def undistortRectifyRemapGray(self):
-        """Calls remap on the images using undistortMaps to undistort and
-        rectify image pair"""
-        # Left
-        self.grayImageL = cv2.remap(\
-            self.grayImageL, self.undistortMapL[0], self.undistortMapL[1], \
-            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-
-        # Right
-        self.grayImageR = cv2.remap(\
-            self.grayImageR, self.undistortMapR[0], self.undistortMapR[1], \
+            imageR, self.undistortMapR[0], self.undistortMapR[1], \
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
     
