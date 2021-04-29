@@ -7,6 +7,7 @@ import cv2
 import numpy
 
 from helperScripts import jsonHelper
+from StereoMatcher import StereoMatcher
 
 
 class ImageProcessing(multiprocessing.Process):
@@ -20,6 +21,8 @@ class ImageProcessing(multiprocessing.Process):
         # Flags
         # Vertical or horizontal stereo rig
         self.vertical = vertical
+
+        self.verbose = False
 
         # Capture link
         self.captureBufferReady = False
@@ -138,6 +141,10 @@ class ImageProcessing(multiprocessing.Process):
             cv2.imshow(windowNames[0], self.imageL)
             cv2.imshow(windowNames[1], self.imageR)
 
+            if self.verbose:
+                print("Preview time: {:.5f}"\
+                    .format(time.time()-self.pickupTime))
+
             key = cv2.waitKey(20)
             if key == 27: # Exit on ESC
                 print("Exiting preview")
@@ -223,7 +230,10 @@ class ImageProcessing(multiprocessing.Process):
         self.loadMonoCalibrationResults()
         self.loadStereoCalibration()
         self.loadStereoRectify()
-        self.createStereoMatcher("SGBM")
+
+        self.StereoMatcher = StereoMatcher("SGBM", \
+                vertical=self.vertical, createRightMatcher=False)
+
         self.initUndistortRectifyMap()
 
 
@@ -233,16 +243,17 @@ class ImageProcessing(multiprocessing.Process):
             self.convertCaptureToGrayscale()
             self.undistortRectifyRemapGray()
 
-            self.rotateGrayCC90()
-            self.computeDisparityMapL()
-            self.rotateDisparityC90()
+            self.StereoMatcher.computeDisparity(\
+                grayImageL=self.grayImageL, grayImageR=self.grayImageR)
 
-            self.clampDisparity(2, 32)
+            self.StereoMatcher.clampDisparity()
+            self.StereoMatcher.applyClosingFilter()
 
-            cv2.imshow("Disparity", self.disparityMap)
+            cv2.imshow("Disparity", self.StereoMatcher.disparityMapL)
 
-            print("Disparity compute time: {:.5f}"\
-                .format(time.time()-self.pickupTime))
+            if self.verbose:
+                print("Disparity compute time: {:.5f}"\
+                    .format(time.time()-self.pickupTime))
 
             key = cv2.waitKey(20)
             if key == 27: # Exit on ESC
@@ -378,84 +389,13 @@ class ImageProcessing(multiprocessing.Process):
                 self.cameraMatrixL, self.distortionCoeffsL, \
                 self.rotationMatrixL, self.projectionMatrixL, \
                 self.grayImageSizeL[::-1], cv2.CV_16SC2)  
-        # cv2.CV_16SC2: Format enables faster execution
+        # cv2.CV_16SC2 format enables faster execution
 
         # Right
         self.undistortMapR = cv2.initUndistortRectifyMap(\
                 self.cameraMatrixR, self.distortionCoeffsR, \
                 self.rotationMatrixR, self.projectionMatrixR, \
                 self.grayImageSizeR[::-1], cv2.CV_16SC2)
-
-    
-    def createStereoSGBM(self):
-        """Create SGBM stereo matchers, implementing the modified 
-        H. Hirschmuller algorithm"""
-        # Parameters
-        blockSize = 3
-        minDisparity = 2
-        numDisparities = 32 - minDisparity
-        penalty1 = 8*3*blockSize**2
-        penalty2 = 32*3*blockSize**2
-        uniquenessRatio = 10
-        speckleWindowSize = 50
-        speckleRange = 2
-        disp12MaxDiff = 5
-        
-        # Creating StereoSGBM matchers
-        # Left
-        self.stereoL = cv2.StereoSGBM_create(minDisparity=minDisparity, \
-            numDisparities=numDisparities, blockSize=blockSize, \
-            uniquenessRatio=uniquenessRatio, \
-            speckleRange = speckleRange, \
-            speckleWindowSize=speckleWindowSize, \
-            disp12MaxDiff=disp12MaxDiff, \
-            P1 = penalty1, P2 = penalty2)
-
-        # Right
-        self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
-
-    
-    def createStereoBM(self):
-        """Create Stereo BM matchers"""
-        # Parameters
-        numDisparities = 96
-        blockSize = 21
-
-        self.stereoL = cv2.StereoBM_create(\
-                                    numDisparities=numDisparities, \
-                                    blockSize=blockSize)
-
-        self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
-
-    
-    def createStereoMatcher(self, matcher=None):
-        """Create StereoBM "BM" or StereoSGBM "SGBM" matcher objects"""
-        assert matcher is not None, "No matcher specified"
-
-        if matcher=="SGBM":
-            self.createStereoSGBM()
-
-        elif matcher=="BM":
-            self.createStereoBM()
-
-        self.kernel = numpy.ones((3,3),numpy.uint8)
-
-
-    def createDisparityWLSFilter(self):
-        """Create disparity map filter based on Weighted Least Squares 
-        filter"""
-        # Parameters
-        lmbda = 80000
-        sigma = 1.8
-        visualMultiplier = 1.0
-
-        # Creating filter
-        self.wlsFilter = cv2.ximgproc.createDisparityWLSFilter(\
-                                            matcher_left=self.stereoL)
-        
-        # Setting parameters
-        self.wlsFilter.setLambda(lmbda)
-        self.wlsFilter.setSigmaColor(sigma)
 
     
     def undistortRectifyRemap(self):
@@ -498,76 +438,6 @@ class ImageProcessing(multiprocessing.Process):
                                                     cv2.COLOR_BGR2GRAY)
         self.grayImageR = cv2.cvtColor(self.undistortImageR, \
                                                     cv2.COLOR_BGR2GRAY)
-    
-
-    def computeDisparityMapL(self):
-        """Compute the left disparity map from current grayscale 
-        images"""
-        self.disparityMap = self.stereoL.compute(\
-                                        self.grayImageL, self.grayImageR)
-        self.disparityMapL = numpy.int16(self.disparityMap)
-
-    
-    def computeDisparityMapR(self):
-        """Compute the left disparity map from current grayscale 
-        images"""
-        self.disparityMapR = numpy.int16(self.stereoR.compute(\
-                                        self.grayImageR, self.grayImageL))
-
-    
-    def rotateGrayCC90(self):
-        """Rotate current grayscale images by 90 degress counterclockwise"""
-        self.grayImageL = cv2.rotate(self.grayImageL, \
-                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
-        self.grayImageR = cv2.rotate(self.grayImageR, \
-                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
-
-                            
-    def computeDisparityMapLR(self):
-        """Compute the left and right disparity maps from current 
-        grayscale images"""
-        self.computeDisparityMapL()
-        self.computeDisparityMapR()
-
-
-    def rotateDisparityC90(self):
-        """Rotate current disparity image by 90 degrees clockwise"""
-        try:
-            self.disparityMap = cv2.rotate(self.disparityMap, \
-                                        cv2.ROTATE_90_CLOCKWISE)
-            self.disparityMapL = cv2.rotate(self.disparityMapL, \
-                                        cv2.ROTATE_90_CLOCKWISE)
-            self.disparityMapR = cv2.rotate(self.disparityMapR, \
-                                        cv2.ROTATE_90_CLOCKWISE)
-        
-        except:
-            pass
-
-                                
-    def rotateGrayC90(self):
-        """Rotate current grayscale images by 90 degress clockwise"""
-        self.grayImageL = cv2.rotate(self.grayImageL, \
-                                        cv2.ROTATE_90_CLOCKWISE)
-        self.grayImageR = cv2.rotate(self.grayImageR, \
-                                        cv2.ROTATE_90_CLOCKWISE)
-
-
-    def applyWLSFilterDisparity(self):
-        """Apply created WLS disparity filter on disparity maps"""
-        self.disparityMap = self.wlsFilter.filter(self.disparityMapL, \
-                self.grayImageL, disparity_map_right=self.disparityMapR)     
-
-
-    def clampDisparity(self, minDisparity, numDisparities):
-        """Sets 0 for most distant object that can be detected"""
-        self.disparityMap = ((self.disparityMap.astype(numpy.float32)\
-                                    /16)-minDisparity)/numDisparities
-
-
-    def applyClosingFilter(self):
-        """Applies a closing filter to the disparity map"""
-        self.disparityMap = cv2.morphologyEx(\
-                    self.disparityMap, cv2.MORPH_CLOSE, self.kernel)    
 
 
     ### Methods to set context and start processes
