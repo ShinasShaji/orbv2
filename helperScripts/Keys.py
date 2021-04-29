@@ -2,8 +2,11 @@ class Keys:
     """Lookup table for ASCII values of certain keys"""
     up = 82
     down = 84
+
     esc = 27
+
     space = 32
+    
     b = 98
     d = 100
     k = 107
