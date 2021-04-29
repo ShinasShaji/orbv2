@@ -1,5 +1,9 @@
 import cv2
 import numpy
+import math
+
+from helperScripts.Keys import Keys
+from helperScripts import jsonHelper
 
 
 class StereoMatcher:
@@ -12,31 +16,96 @@ class StereoMatcher:
         self.matcher = matcher
         self.vertical = vertical
         self.hasRightMatcher = createRightMatcher
-        self.hasWLSFilter = False
+        self.parametersLoaded = False
 
-        # Parameters
-        self.minDisparity = 0
-        self.kernel = numpy.ones((3,3),numpy.uint8)
+        # Initializing matcher
+        self.loadParameters()
+        self.createMatcher()
 
+
+    def saveParameters(self, path="data/"):
+        """Export parameters of matcher as a json"""
         if self.matcher=="SGBM":
-            self.createSGBM()
-
-        else:
-            self.createBM()
-
+            path = "".join([path, "parametersSGBM.json"])
         
-    def createSGBM(self):
-        """Create StereoSGBM (Semi Global Block Matcher) object"""
+        else:
+            path = "".join([path, "parametersBM.json"])
+
+        # Crafting dictionary to hold parameters
+        parameterDict = {
+            "blockSize":self.blockSize,
+            "minDisparity":self.minDisparity,
+            "maxDisparity":self.maxDisparity,
+            "uniquenessRatio":self.uniquenessRatio,
+            "speckleWindowSize":self.speckleWindowSize,
+            "speckleRange":self.speckleRange,
+            "disp12MaxDiff":self.disp12MaxDiff,
+            "kernelOrder":self.kernelOrder
+        }
+
+        jsonHelper.dictToJson(parameterDict, path)
+
+    
+    def loadParametersFromJson(self, path="data/"):
+        """Load parameters of matcher currently in use"""
+        if self.matcher=="SGBM":
+            path = "".join([path, "parametersSGBM.json"])
+        
+        else:
+            path = "".join([path, "parametersBM.json"])
+
+        parameterDict = jsonHelper.jsonToDict(path)
+
+        # Loading to class variables
+        self.blockSize = parameterDict["blockSize"]
+        self.minDisparity = parameterDict["minDisparity"]
+        self.maxDisparity = parameterDict["maxDisparity"]
+        self.numDisparities = self.maxDisparity - self.minDisparity
+        self.penalty1 = 8*3*self.blockSize**2
+        self.penalty2 = 32*3*self.blockSize**2
+        self.uniquenessRatio = parameterDict["uniquenessRatio"]
+        self.speckleWindowSize = parameterDict["speckleWindowSize"]
+        self.speckleRange = parameterDict["speckleRange"]
+        self.disp12MaxDiff = parameterDict["disp12MaxDiff"]
+        self.kernelOrder = parameterDict["kernelOrder"]
+        self.kernel = numpy.ones((self.kernelOrder,\
+                                self.kernelOrder),numpy.uint8)
+
+        self.parametersLoaded = True
+
+    
+    def loadDefaultParameters(self):
+        """Load default matcher parameters"""
+        # Loading default parameters to class variables
         self.blockSize = 3
         self.minDisparity = 2
-        self.numDisparities = 32 - self.minDisparity
+        self.maxDisparity = 34
+        self.numDisparities = self.maxDisparity - self.minDisparity
         self.penalty1 = 8*3*self.blockSize**2
         self.penalty2 = 32*3*self.blockSize**2
         self.uniquenessRatio = 10
         self.speckleWindowSize = 50
         self.speckleRange = 2
         self.disp12MaxDiff = 5
+        self.kernelOrder = 3
+        self.kernel = numpy.ones((self.kernelOrder,\
+                                self.kernelOrder),numpy.uint8)
 
+        self.parametersLoaded = True
+
+    
+    def loadParameters(self):
+        """Loads matcher parameters from json; if unavailable loads default
+        parameters"""
+        if not self.parametersLoaded:
+            try:
+                self.loadParametersFromJson()
+            except:
+                self.loadDefaultParameters()
+
+        
+    def createSGBM(self):
+        """Create StereoSGBM (Semi Global Block Matcher) object"""
         # Creating StereoSGBM matchers
         # Left
         self.stereoL = cv2.StereoSGBM_create(minDisparity=self.minDisparity, \
@@ -51,13 +120,18 @@ class StereoMatcher:
         if self.hasRightMatcher:
             self.stereoR = cv2.ximgproc.createRightMatcher(self.stereoL)
 
+
+    def createMatcher(self):
+        """Creates stereo object based on matcher flag"""
+        if self.matcher=="SGBM":
+            self.createSGBM()
+
+        else:
+            self.createBM()
+
     
     def createBM(self):
         """Create StereoBM (Block Matcher) object"""
-        # Parameters
-        self.numDisparities = 96
-        self.blockSize = 21
-
         # Left
         self.stereoL = cv2.StereoBM_create(\
                                     numDisparities=self.numDisparities, \
@@ -71,7 +145,7 @@ class StereoMatcher:
     def computeDisparity(self, grayImageL, grayImageR):
         """Compute left and right (if enabled) disparity"""
         if self.vertical:
-            self.grayImageL = grayImageL
+            self.grayImageL = grayImageL.copy()
 
             grayImageL = cv2.rotate(grayImageL, \
                                         cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -127,37 +201,161 @@ class StereoMatcher:
         self.wlsFilter.setLambda(self.lmbda)
         self.wlsFilter.setSigmaColor(self.sigma)
 
-        self.hasWLSFilter = True
-
-    
-    def checkWLSFilter(self):
-        """Check if WLS filter has been initialized"""
-        if self.hasWLSFilter:
-            return True
-
-        else:
-            print("WLS disparity filter not initialized")
-            return False
-
-    
-    def checkRightMatcher(self):
-        """Check if right matcher has been initialized"""
-        if self.hasRightMatcher:
-            return True
-
-        else:
-            print("Right stereo matcher not initialized")
-            return False
-
     
     def applyWLSFilterDisparity(self):
         """Apply created WLS disparity filter on disparity maps"""
-        if self.checkWLSFilter() and self.checkRightMatcher():
-            self.disparityMapL = self.wlsFilter.filter(self.disparityMapL, \
+        self.disparityMapL = self.wlsFilter.filter(self.disparityMapL, \
                 self.grayImageL, disparity_map_right=self.disparityMapR)
+
+    
+    def tuneParameters(self):
+        """Tune stereo matcher parameters"""
+        key = cv2.waitKey(20)
+
+        if key == Keys.esc: # Exit on ESC
+            print("Exiting disparity preview")
+            return False
+
+        elif key == Keys.b: # blocksize on b
+            print("blockSize: {}".format(self.blockSize))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up: # Increment on up arrow
+                self.blockSize+=2
+            elif key == Keys.down: # Decrement on down arrow
+                self.blockSize-=2
+            # Verify value is valid
+            if self.blockSize%2==0:
+                self.blockSize+=1
+            if self.blockSize<1:
+                self.blockSize=1
+
+            print("blockSize --> {}".format(self.blockSize))
+
+        elif key == Keys.k: # kernelOrder on k
+            print("kernelOrder: {}".format(self.kernelOrder))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.kernelOrder+=2
+            elif key == Keys.down:
+                self.kernelOrder-=2
+            
+            if self.kernelOrder%2==0:
+                self.kernelOrder+=1
+            if self.kernelOrder<3:
+                self.kernelOrder=3
+
+            print("kernelOrder --> {}".format(self.kernelOrder))
+
+        elif key == Keys.m: # minDisparity on m
+            print("minDisparity: {}; numDisparities: {}".format(\
+                                    self.minDisparity, self.numDisparities))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.minDisparity+=1
+                self.maxDisparity+=1
+            elif key == Keys.down:
+                self.minDisparity-=1
+                self.maxDisparity-=1
+            
+            self.numDisparities = self.maxDisparity - self.minDisparity
+
+            print("minDisparity --> {}; numDisparities --> {}".format(\
+                                    self.minDisparity, self.numDisparities))
+
+        elif key == Keys.n: # numDisparities on n
+            print("maxDisparity: {}; numDisparities: {}".format(\
+                                self.maxDisparity, self.numDisparities))
+            key = cv2.waitKey(0)
+
+            numDisparities = self.maxDisparity - self.minDisparity
+            power2 = int(math.log(numDisparities, 2))
+
+            if key == Keys.up:
+                power2+=1
+            elif key == Keys.down:
+                power2-=1
+                if power2<1:
+                    power2=1
+
+            numDisparities = 2**power2
+            maxDisparity = numDisparities + self.minDisparity
+            if numDisparities>self.minDisparity:
+                self.numDisparities = numDisparities
+                self.maxDisparity = maxDisparity
+
+            print("maxDisparity --> {}; numDisparities --> {}".format(\
+                                self.maxDisparity, self.numDisparities))
+
+        elif key == Keys.u: # uniquenessRatio on u
+            print("uniquenessRatio: {}".format(self.uniquenessRatio))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.uniquenessRatio+=1
+            elif key == Keys.down:
+                self.uniquenessRatio-=1
+
+            if self.uniquenessRatio<0:
+                self.uniquenessRatio=0
+            elif self.uniquenessRatio>100:
+                self.uniquenessRatio=100
+
+            print("uniquenessRatio --> {}".format(self.uniquenessRatio))
+
+        elif key == Keys.w: # speckleWindowSize on w
+            print("speckleWindowSize: {}".format(self.speckleWindowSize))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.speckleWindowSize+=1
+            elif key == Keys.down:
+                self.speckleWindowSize-=1
+
+            if self.speckleWindowSize<0:
+                self.speckleWindowSize=0
+
+            print("speckleWindowSize --> {}".format(self.speckleWindowSize))
+
+        elif key == Keys.r: # speckleRange on r
+            print("speckleRange: {}".format(self.speckleRange))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.speckleRange+=1
+            elif key == Keys.down:
+                self.speckleRange-=1
+
+            if self.speckleRange<0:
+                self.speckleRange=0
+
+            print("speckleRange --> {}".format(self.speckleRange))
+
+        elif key == Keys.d: # disp12MaxDiff on d
+            print("disp12MaxDiff: {}".format(self.disp12MaxDiff))
+            key = cv2.waitKey(0)
+
+            if key == Keys.up:
+                self.disp12MaxDiff+=1
+            elif key == Keys.down:
+                self.disp12MaxDiff-=1
+
+            if self.disp12MaxDiff<-1:
+                self.disp12MaxDiff=-1
+
+            print("disp12MaxDiff --> {}".format(self.disp12MaxDiff))
+
+        elif key == Keys.l:
+            self.loadParameters()
+            print(" ".join(["Reloaded", self.matcher, "parameters"]))
+
+        elif key == Keys.s:
+            self.saveParameters()
+            print(" ".join(["Saved", self.matcher, "parameters"]))
         
-        else:
-            print("Could not apply WLS filter")
+        return True
 
 
 
