@@ -1,9 +1,11 @@
-import cv2
-import numpy
 import math
 
-from helperScripts.Keys import Keys
+import cv2
+import matplotlib.pyplot as plt
+import numpy
+
 from helperScripts import jsonHelper
+from helperScripts.Keys import Keys
 
 
 class StereoMatcher:
@@ -207,6 +209,48 @@ class StereoMatcher:
         self.disparityMapL = self.wlsFilter.filter(self.disparityMapL, \
                 self.grayImageL, disparity_map_right=self.disparityMapR)
 
+
+    def referenceDispToDepthMatrix(self, dispToDepthMatrix):
+        """Create class reference to the disparity to depth matrix, Q"""
+        self.dispToDepthMatrix = dispToDepthMatrix
+
+    
+    def generatePointCloud(self):
+        """Generate point cloud from dispariy map"""
+
+        # Guesstimate parameters
+        h, w = 360, 720
+        f = 0.8*w                      # guess for focal length
+        Q = numpy.float32(\
+                   [[1, 0, 0, -0.5*w],
+                    [0,-1, 0,  0.5*h], # turn points 180 deg around x-axis,
+                    [0, 0, 0,     -f], # so that y-axis looks up
+                    [0, 0, 1,      0]])
+
+        # Temporary implementation to view point clouds
+        points = cv2.reprojectImageTo3D(self.disparityMapL, \
+            self.dispToDepthMatrix)
+        pointCloud = points.reshape(\
+                    (points.shape[0]*points.shape[1], 3))[0::20]/100000
+        pointCloud = pointCloud[pointCloud[:, 2]>0]  
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection = "3d")
+        ax.scatter(pointCloud[:,0], pointCloud[:,1], pointCloud[:,2], s=2)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+
+        plt.show(block=True)
+
+    
+    def generateDepthMap(self):
+        """Generate depth map from disparity"""
+
+        ### To do: Implement
+
+        pass
+
     
     def tuneParameters(self):
         """Tune stereo matcher parameters"""
@@ -215,6 +259,9 @@ class StereoMatcher:
         if key == Keys.esc: # Exit on ESC
             print("Exiting disparity preview")
             return False
+
+        elif key == Keys.space: # Generate point cloud on space
+            self.generatePointCloud()
 
         elif key == Keys.b: # blocksize on b
             print("blockSize: {}".format(self.blockSize))
