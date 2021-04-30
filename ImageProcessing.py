@@ -233,8 +233,10 @@ class ImageProcessing(multiprocessing.Process):
         self.loadStereoCalibration()
         self.loadStereoRectify()
 
-        self.StereoMatcher = StereoMatcher("SGBM", \
+        self.stereoMatcher = StereoMatcher("SGBM", \
                 vertical=self.vertical, createRightMatcher=False)
+        self.stereoMatcher.referenceDispToDepthMatrix(\
+                self.dispToDepthMatrix)
 
         self.initUndistortRectifyMap()
 
@@ -242,17 +244,17 @@ class ImageProcessing(multiprocessing.Process):
         while not self.quitEvent.is_set():
             self.pollCapture()
 
-            self.convertCaptureToGrayscale()
+            self.convertToGrayscale(self.imageL, self.imageR)
             self.undistortRectifyRemap(self.grayImageL, self.grayImageR)
 
-            self.StereoMatcher.computeDisparity(\
+            self.stereoMatcher.computeDisparity(\
                 grayImageL=self.undistortImageL, \
                 grayImageR=self.undistortImageR)
 
-            self.StereoMatcher.clampDisparity()
-            self.StereoMatcher.applyClosingFilter()
+            self.stereoMatcher.clampDisparity()
+            self.stereoMatcher.applyClosingFilter()
 
-            cv2.imshow("Disparity", self.StereoMatcher.disparityMapL)
+            cv2.imshow("Disparity", self.stereoMatcher.disparityMapL)
 
             if self.vertical:
                 cv2.imshow("Horizontal_Epipolar", \
@@ -267,8 +269,8 @@ class ImageProcessing(multiprocessing.Process):
                 print("Disparity compute time: {:.5f}"\
                     .format(time.time()-self.pickupTime))
 
-            if self.StereoMatcher.tuneParameters():
-                self.StereoMatcher.createMatcher()
+            if self.stereoMatcher.tuneParameters():
+                self.stereoMatcher.createMatcher()
             else:
                 self.quitEvent.set()
                 break
@@ -377,7 +379,10 @@ class ImageProcessing(multiprocessing.Process):
 
         # Common
         # Q matrix
-        self.dispToDepthMatrix = dataDict["dispToDepthMatrix"]
+        self.dispToDepthMatrix = numpy.array(\
+                        dataDict["dispToDepthMatrix"], dtype=numpy.float32)
+
+        print("Loaded stereo rectification data")
 
         self.stereoRectifyLoaded = True
 
@@ -424,18 +429,10 @@ class ImageProcessing(multiprocessing.Process):
             cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
     
-    def convertCaptureToGrayscale(self):
-        """Convert captures BGR images to GRAY"""
-        self.grayImageL = cv2.cvtColor(self.imageL, cv2.COLOR_BGR2GRAY)
-        self.grayImageR = cv2.cvtColor(self.imageR, cv2.COLOR_BGR2GRAY)
-
-    
-    def convertUndistortToGrayscale(self):
-        """Convert undistorted BGR images to GRAY"""
-        self.grayImageL = cv2.cvtColor(self.undistortImageL, \
-                                                    cv2.COLOR_BGR2GRAY)
-        self.grayImageR = cv2.cvtColor(self.undistortImageR, \
-                                                    cv2.COLOR_BGR2GRAY)
+    def convertToGrayscale(self, imageL, imageR):
+        """Convert BGR images to GRAY"""
+        self.grayImageL = cv2.cvtColor(imageL, cv2.COLOR_BGR2GRAY)
+        self.grayImageR = cv2.cvtColor(imageR, cv2.COLOR_BGR2GRAY)
 
 
     ### Methods to set context and start processes
