@@ -1,6 +1,4 @@
-import fnmatch
 import glob
-import os
 import time
 
 import cv2
@@ -65,9 +63,10 @@ class Calibrate:
 
         # Counting number of images in directory
         # Ensure that only required and matching images are stored here
-        self.imageCount = len(fnmatch.filter(os.listdir(self.path), '*.png'))
+        self.imageCount = len(self.imageGlobL) + len(self.imageGlobR)
         
-        assert (self.imageCount%2)==0, "Unpaired images exist in folder"
+        assert len(self.imageGlobL)==len(self.imageGlobR), \
+                                        "Unpaired images exist in folder"
         
         print("Found {} images in folder ({} image pairs)".format(\
                                 self.imageCount, int(self.imageCount/2)))
