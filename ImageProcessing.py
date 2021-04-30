@@ -15,9 +15,6 @@ class ImageProcessing(multiprocessing.Process):
     def __init__(self, vertical=True):
         super(ImageProcessing, self).__init__()
 
-        # Capture details
-        self.capturePath = "captures/"
-
         # Flags
         # Vertical or horizontal stereo rig
         self.vertical = vertical
@@ -102,7 +99,7 @@ class ImageProcessing(multiprocessing.Process):
 
     ### Methods to preview and save capture 
 
-    def captureImages(self):
+    def captureImages(self, path="captures/"):
         """Capture and save images from both cameras"""
         if self.vertical:
             fileNames = [("top", self.imageL), ("bottom", self.imageR)]
@@ -114,8 +111,8 @@ class ImageProcessing(multiprocessing.Process):
 
         for (camera, frame) in fileNames:
             imageName = "".join([camera, "_{}.png".format(timeString)])
-            cv2.imwrite(os.path.join(self.capturePath, imageName), frame)
-            print("Captured {}".format(imageName))
+            cv2.imwrite(os.path.join(path, imageName), frame)
+            print("Saved {} to {}".format(imageName, path))
 
     
     def pollCapture(self):
@@ -137,9 +134,16 @@ class ImageProcessing(multiprocessing.Process):
 
         while not self.quitEvent.is_set():
             self.pollCapture()
+            
+            if self.vertical:
+                cv2.imshow(windowNames[0], cv2.rotate(self.imageL, \
+                    cv2.ROTATE_90_CLOCKWISE))
+                cv2.imshow(windowNames[1], cv2.rotate(self.imageR, \
+                    cv2.ROTATE_90_CLOCKWISE))
 
-            cv2.imshow(windowNames[0], self.imageL)
-            cv2.imshow(windowNames[1], self.imageR)
+            else:
+                cv2.imshow(windowNames[0], self.imageL)
+                cv2.imshow(windowNames[1], self.imageR)
 
             if self.verbose:
                 print("Preview time: {:.5f}"\
@@ -204,8 +208,15 @@ class ImageProcessing(multiprocessing.Process):
 
             self.undistortRectifyRemap(self.imageL, self.imageR)
 
-            cv2.imshow(windowNames[0], self.undistortImageL)
-            cv2.imshow(windowNames[1], self.undistortImageR)
+            if self.vertical:
+                cv2.imshow(windowNames[0], cv2.rotate(self.undistortImageL, \
+                    cv2.ROTATE_90_CLOCKWISE))
+                cv2.imshow(windowNames[1], cv2.rotate(self.undistortImageR, \
+                    cv2.ROTATE_90_CLOCKWISE))
+
+            else:
+                cv2.imshow(windowNames[0], self.undistortImageL)
+                cv2.imshow(windowNames[1], self.undistortImageR)
 
             # Draw epipolar lines to check rectification
             cv2.imshow("Vertical_Epipolar", \
@@ -254,7 +265,17 @@ class ImageProcessing(multiprocessing.Process):
             self.stereoMatcher.clampDisparity()
             self.stereoMatcher.applyClosingFilter()
 
-            cv2.imshow("Disparity", self.stereoMatcher.disparityMapL)
+            if self.vertical:
+                cv2.imshow("Disparity", \
+                    cv2.rotate((self.stereoMatcher.disparityMapL\
+                        -self.stereoMatcher.minDisparity)/\
+                        self.stereoMatcher.numDisparities, \
+                        cv2.ROTATE_90_CLOCKWISE))
+            
+            else:
+                cv2.imshow("Disparity", (self.stereoMatcher.disparityMapL\
+                    -self.stereoMatcher.minDisparity)/\
+                    self.stereoMatcher.numDisparities)
 
             if self.vertical:
                 cv2.imshow("Horizontal_Epipolar", \
@@ -269,7 +290,7 @@ class ImageProcessing(multiprocessing.Process):
                 print("Disparity compute time: {:.5f}"\
                     .format(time.time()-self.pickupTime))
 
-            if self.stereoMatcher.tuneParameters():
+            if self.stereoMatcher.tuneParameters(self):
                 self.stereoMatcher.createMatcher()
             else:
                 self.quitEvent.set()
@@ -450,7 +471,7 @@ class ImageProcessing(multiprocessing.Process):
         elif self.context=="previewDisparity":
             self.previewDisparity()
 
-        elif self.context=="undistortPreview":
+        elif self.context=="previewUndistort":
             self.previewUndistortCapture()
 
 
