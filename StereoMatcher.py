@@ -146,36 +146,22 @@ class StereoMatcher:
     
     def computeDisparity(self, grayImageL, grayImageR):
         """Compute left and right (if enabled) disparity"""
-        if self.vertical:
-            self.grayImageL = grayImageL.copy()
-
-            grayImageL = cv2.rotate(grayImageL, \
-                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
-            grayImageR = cv2.rotate(grayImageR, \
-                                        cv2.ROTATE_90_COUNTERCLOCKWISE)
-
         self.disparityMapL = self.stereoL.compute(\
                                         grayImageL, grayImageR)
-        if self.vertical:
-            self.disparityMapL = cv2.rotate(self.disparityMapL, \
-                                        cv2.ROTATE_90_CLOCKWISE)
         
         if self.hasRightMatcher:
             self.disparityMapR = self.stereoR.compute(\
                                         grayImageR, grayImageL)
-            if self.vertical:
-                self.disparityMapR = cv2.rotate(self.disparityMapR, \
-                                        cv2.ROTATE_90_CLOCKWISE)
 
     
     def clampDisparity(self):
         """Sets 0 for most distant object that can be detected"""
         self.disparityMapL = ((self.disparityMapL.astype(numpy.float32)\
-                            /16)-self.minDisparity)/self.numDisparities
+                            /16))
 
         if self.hasRightMatcher:
             self.disparityMapR = ((self.disparityMapR.astype(numpy.float32)\
-                            /16)-self.minDisparity)/self.numDisparities
+                            /16))
 
     
     def applyClosingFilter(self):
@@ -231,7 +217,7 @@ class StereoMatcher:
         points = cv2.reprojectImageTo3D(self.disparityMapL, \
             self.dispToDepthMatrix)
         pointCloud = points.reshape(\
-                    (points.shape[0]*points.shape[1], 3))[0::20]/100000
+                    (points.shape[0]*points.shape[1], 3))[0::20]
         pointCloud = pointCloud[pointCloud[:, 2]>0]  
 
         fig = plt.figure()
@@ -251,8 +237,14 @@ class StereoMatcher:
 
         pass
 
+
+    def captureImages(self, imageProcessor, path="captures/testImages"):
+        """Call the image capture method of the passed ImageProcessing
+        object"""
+        imageProcessor.captureImages(path)
+
     
-    def tuneParameters(self):
+    def tuneParameters(self, imageProcessor):
         """Tune stereo matcher parameters"""
         key = cv2.waitKey(20)
 
@@ -260,8 +252,11 @@ class StereoMatcher:
             print("Exiting disparity preview")
             return False
 
-        elif key == Keys.space: # Generate point cloud on space
+        elif key == Keys.p: # Generate point cloud on space
             self.generatePointCloud()
+
+        elif key == Keys.space: # Capture images on space
+            self.captureImages(imageProcessor)
 
         elif key == Keys.b: # blocksize on b
             print("blockSize: {}".format(self.blockSize))
