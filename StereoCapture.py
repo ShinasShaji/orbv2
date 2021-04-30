@@ -8,7 +8,7 @@ import numpy
 
 class StereoCapture(multiprocessing.Process):
     """Class to handle capture from stereo camera setup"""
-    def __init__(self, cameraID=(0,2), imageSize=(1280/2,720/2), fps=4, vertical=True):
+    def __init__(self, cameraID=(2,0), imageSize=(1280/2,720/2), fps=4, vertical=True):
         super(StereoCapture, self).__init__()
 
         # Camera IDs and properties
@@ -69,6 +69,8 @@ class StereoCapture(multiprocessing.Process):
 
         # Finding image shape
         retVal, leftImage = self.leftCam.read()
+        if self.vertical:
+            leftImage = cv2.rotate(leftImage, cv2.ROTATE_90_COUNTERCLOCKWISE)
         self.cvImageShape = leftImage.shape
         self.cvImageSize = leftImage.size
 
@@ -136,9 +138,16 @@ class StereoCapture(multiprocessing.Process):
         
         self.captureTime[0] = time.time()
 
+        retLeft, imageL = self.leftCam.retrieve()
+        retRight, imageR = self.rightCam.retrieve()
+
         # Write images to buffer instead of assigning as array
-        retLeft, self.imageL[:] = self.leftCam.retrieve()
-        retRight, self.imageR[:] = self.rightCam.retrieve()
+        if self.vertical:
+            imageL = cv2.rotate(imageL, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            imageR = cv2.rotate(imageR, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+        self.imageL[:] = imageL
+        self.imageR[:] = imageR
 
         if retLeft and retRight:
             # Denoise if flag set
