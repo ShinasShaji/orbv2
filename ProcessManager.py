@@ -8,7 +8,7 @@ class ProcessManager():
         self.imageProcessing = ImageProcessing()
 
         self.possibleContexts = ["preview", "previewDisparity", \
-            "undistortPreview"]
+            "previewUndistort"]
 
 
     def prepareCapturePipeline(self):
@@ -60,7 +60,7 @@ class ProcessManager():
             self.stereoCapture.join()
             self.imageProcessing.join()
 
-        elif self.context=="undistortPreview":
+        elif self.context=="previewUndistort":
             # Communicating context to objects
             self.imageProcessing.setContext(self.context)
 
