@@ -26,7 +26,6 @@ print(f'{len(contours)} contour(s) found.')
 cv.drawContours(blank, contours, -1, (0,0,255), 2)
 cv.imshow('Contours Drawn', blank)
 
-
 # cv.RETR_LIST ==> All the contours 
 # cv.RETR_EXTERNAL ==> Only the external contours
 # cv.RETR_TREE ==> All hierarchical contours
