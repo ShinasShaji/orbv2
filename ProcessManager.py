@@ -1,11 +1,11 @@
-from ImageProcessing import ImageProcessing
+from ImageProcessor import ImageProcessor
 from StereoCapture import StereoCapture
 
 
 class ProcessManager():
     def __init__(self):
         self.stereoCapture = StereoCapture()
-        self.imageProcessing = ImageProcessing()
+        self.imageProcessor = ImageProcessor()
 
         self.possibleContexts = ["preview", "previewDisparity", \
             "previewUndistort"]
@@ -15,11 +15,11 @@ class ProcessManager():
         """References bufers and events required for capture"""
         self.stereoCapture.createBuffers()
 
-        self.imageProcessing.referenceCaptureBuffers(\
+        self.imageProcessor.referenceCaptureBuffers(\
             self.stereoCapture.getBuffers(), \
             self.stereoCapture.getCVImageShape())
 
-        self.imageProcessing.referenceCaptureEvents(\
+        self.imageProcessor.referenceCaptureEvents(\
             self.stereoCapture.getCaptureEvents())
 
 
@@ -40,36 +40,36 @@ class ProcessManager():
         # Below are run based on context
         if self.context=="preview":
             # Communicating context to objects
-            self.imageProcessing.setContext(self.context)
+            self.imageProcessor.setContext(self.context)
 
             # Starting processes
             self.stereoCapture.start()
-            self.imageProcessing.start()
+            self.imageProcessor.start()
 
             self.stereoCapture.join()
-            self.imageProcessing.join()
+            self.imageProcessor.join()
 
         elif self.context=="previewDisparity":
             # Communicating context to objects
-            self.imageProcessing.setContext(self.context)
+            self.imageProcessor.setContext(self.context)
 
             # Starting processes
             self.stereoCapture.start()
-            self.imageProcessing.start()
+            self.imageProcessor.start()
 
             self.stereoCapture.join()
-            self.imageProcessing.join()
+            self.imageProcessor.join()
 
         elif self.context=="previewUndistort":
             # Communicating context to objects
-            self.imageProcessing.setContext(self.context)
+            self.imageProcessor.setContext(self.context)
 
             # Starting processes
             self.stereoCapture.start()
-            self.imageProcessing.start()
+            self.imageProcessor.start()
 
             self.stereoCapture.join()
-            self.imageProcessing.join()
+            self.imageProcessor.join()
 
 
 
