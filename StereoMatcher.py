@@ -199,28 +199,15 @@ class StereoMatcher:
                 self.grayImageL, disparity_map_right=self.disparityMapR)
 
 
-    def referenceDispToDepthMatrix(self, dispToDepthMatrix):
-        """Create class reference to the disparity to depth matrix, Q"""
-        self.dispToDepthMatrix = dispToDepthMatrix
-
-    
-    def generatePointCloud(self):
-        """Generate point cloud from dispariy map"""
-
-        ### To do: Implement
-
-        pass
-
-    
     def setBaseline(self, baseline):
         """Use to set the baseline for the stereo rig"""
         self.baseline = baseline
 
     
-    def generateDepthMap(self, imageProcessor):
+    def generateDepthMap(self):
         """Generate depth map from disparity"""
         # Get focal length from projection matrix
-        focalLength = imageProcessor.projectionMatrixL[0][0]
+        focalLength = self.imageProcessor.projectionMatrixL[0][0]
 
         self.disparityMapL[self.disparityMapL==0] = 0.9
         self.disparityMapL[self.disparityMapL==-1] = 0.9
@@ -259,14 +246,23 @@ class StereoMatcher:
             np.savetxt(plyFile, vertices, fmt='%f %f %f %d %d %d ')
                     
 
-
-    def captureImages(self, imageProcessor, path="captures/testImages"):
-        """Call the image capture method of the passed ImageProcessing
-        object"""
-        imageProcessor.captureImages(path)
+    def referenceImageProcessor(self, imageProcessor):
+        """Create class references to passed ImageProcessor"""
+        self.imageProcessor = imageProcessor
 
     
-    def tuneParameters(self, imageProcessor):
+    def referenceVoxelGrid(self, voxelGrid):
+        """Creates class references to passed VoxelGrid"""
+        self.voxelGrid = voxelGrid
+
+
+    def captureImages(self, path="captures/testImages"):
+        """Call the image capture method of the passed ImageProcessing
+        object"""
+        self.imageProcessor.captureImages(path)
+
+    
+    def tuneParameters(self):
         """Tune stereo matcher parameters"""
         key = cv2.waitKey(20)
 
@@ -278,10 +274,10 @@ class StereoMatcher:
             self.generatePointCloud()
 
         elif key == Keys.z: # Generate depth map on z
-            self.generateDepthMap(imageProcessor)
+            self.generateDepthMap()
 
         elif key == Keys.space: # Capture images on space
-            self.captureImages(imageProcessor)
+            self.captureImages()
 
         elif key == Keys.b: # blocksize on b
             print("blockSize: {}".format(self.blockSize))
