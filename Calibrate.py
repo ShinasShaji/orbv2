@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from helperScripts import jsonHelper
+from helperScripts.TimeKeeper import TimeKeeper
 
 
 class Calibrate:
@@ -38,8 +39,8 @@ class Calibrate:
         # Camera properties
         self.apertureSize = (3.84, 2.16) # (width, height) in mm
 
-        # Performance counter
-        self.perfCounter = [0, 0]
+        # Debug
+        self.timeKeeper = TimeKeeper()
 
 
     def loadImagesForCalibration(self, imageFormat=".png", path="captures"):
@@ -81,18 +82,6 @@ class Calibrate:
         else:
             print("Images not loaded")
             return False  
-
-
-    def startPerfCounter(self):
-        """Start an internal counter for evaluating performance. Stop with
-        stopPerfCounter()"""
-        self.perfCounter = [time.perf_counter(), 0]
-
-    
-    def returnPerfCounter(self):
-        """Stop internal perf_counter and return elapsed time"""
-        self.perfCounter[1] = time.perf_counter()
-        return (self.perfCounter[1]-self.perfCounter[0])
 
 
     def findCorners(self, previewDelay=500):
@@ -153,7 +142,7 @@ class Calibrate:
     def monoCalibrate(self):
         """Calculate camera matrix, distortion coefficients and rotation and 
         translation vectors"""
-        self.startPerfCounter()
+        self.timeKeeper.startPerfCounter()
 
         # Left
         retValL, self.cameraMatrixL, self.distortionCoeffsL, \
@@ -183,7 +172,7 @@ class Calibrate:
         if retValL and retValR:
             self.monoCalibrated = True
             print("Mono calibration completed in {:.5f} seconds".format(\
-                                            self.returnPerfCounter()))
+                                        self.timeKeeper.returnPerfCounter()))
 
         else:
             self.monoCalibrated = False
@@ -357,7 +346,7 @@ class Calibrate:
         # Intrinsic camara matrices are fixed; only Rotation, Translation
         # Essential, and Fundamental matrices are calculated
 
-        self.startPerfCounter()
+        self.timeKeeper.startPerfCounter()
 
         if useOptimalMatrix:
             cameraMatrixL = self.optimalCameraMatrixL
@@ -381,7 +370,7 @@ class Calibrate:
         if retValStereo:
             self.stereoCalibrated = True
             print("Stereo calibration completed in {:.5f} seconds".format(\
-                                                self.returnPerfCounter()))
+                                        self.timeKeeper.returnPerfCounter()))
         
         else:
             self.stereoCalibrated = False
