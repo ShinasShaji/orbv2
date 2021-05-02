@@ -271,7 +271,7 @@ class StereoMatcher:
             return False
 
         elif key == Keys.p: # Generate point cloud on p
-            self.generatePointCloud()
+            self.voxelGrid.generatePointCloud()
 
         elif key == Keys.z: # Generate depth map on z
             self.generateDepthMap()

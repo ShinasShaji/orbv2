@@ -249,9 +249,10 @@ class ImageProcessor(multiprocessing.Process):
 
         self.stereoMatcher = StereoMatcher("SGBM", \
                 vertical=self.vertical, createRightMatcher=False)
-        self.stereoMatcher.referenceImageProcessor(self)
-
         self.voxelGrid = VoxelGrid(stereoMatcher=self.stereoMatcher)
+        
+        self.stereoMatcher.referenceImageProcessor(self)
+        self.stereoMatcher.referenceVoxelGrid(self.voxelGrid)
 
         self.initUndistortRectifyMap()
 
