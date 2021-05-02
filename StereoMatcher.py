@@ -1,8 +1,9 @@
+import datetime
 import math
 
 import cv2
 import matplotlib.pyplot as plt
-import numpy
+import numpy as np
 
 from helperScripts import jsonHelper
 from helperScripts.Keys import Keys
@@ -22,6 +23,7 @@ class StereoMatcher:
 
         # Initializing matcher
         self.loadParameters()
+        self.setBaseline(32)
         self.createMatcher()
 
 
@@ -70,8 +72,8 @@ class StereoMatcher:
         self.speckleRange = parameterDict["speckleRange"]
         self.disp12MaxDiff = parameterDict["disp12MaxDiff"]
         self.kernelOrder = parameterDict["kernelOrder"]
-        self.kernel = numpy.ones((self.kernelOrder,\
-                                self.kernelOrder),numpy.uint8)
+        self.kernel = np.ones((self.kernelOrder,\
+                                self.kernelOrder),np.uint8)
 
         self.parametersLoaded = True
 
@@ -90,8 +92,8 @@ class StereoMatcher:
         self.speckleRange = 2
         self.disp12MaxDiff = 5
         self.kernelOrder = 3
-        self.kernel = numpy.ones((self.kernelOrder,\
-                                self.kernelOrder),numpy.uint8)
+        self.kernel = np.ones((self.kernelOrder,\
+                                self.kernelOrder),np.uint8)
 
         self.parametersLoaded = True
 
@@ -146,6 +148,7 @@ class StereoMatcher:
     
     def computeDisparity(self, grayImageL, grayImageR):
         """Compute left and right (if enabled) disparity"""
+        self.grayImageL = grayImageL
         self.disparityMapL = self.stereoL.compute(\
                                         grayImageL, grayImageR)
         
@@ -156,11 +159,11 @@ class StereoMatcher:
     
     def clampDisparity(self):
         """Sets 0 for most distant object that can be detected"""
-        self.disparityMapL = ((self.disparityMapL.astype(numpy.float32)\
+        self.disparityMapL = ((self.disparityMapL.astype(np.float32)\
                             /16))
 
         if self.hasRightMatcher:
-            self.disparityMapR = ((self.disparityMapR.astype(numpy.float32)\
+            self.disparityMapR = ((self.disparityMapR.astype(np.float32)\
                             /16))
 
     
@@ -204,38 +207,57 @@ class StereoMatcher:
     def generatePointCloud(self):
         """Generate point cloud from dispariy map"""
 
-        # Guesstimate parameters
-        h, w = 360, 720
-        f = 0.8*w                      # guess for focal length
-        Q = numpy.float32(\
-                   [[1, 0, 0, -0.5*w],
-                    [0,-1, 0,  0.5*h], # turn points 180 deg around x-axis,
-                    [0, 0, 0,     -f], # so that y-axis looks up
-                    [0, 0, 1,      0]])
-
-        # Temporary implementation to view point clouds
-        points = cv2.reprojectImageTo3D(self.disparityMapL, \
-            self.dispToDepthMatrix)
-        pointCloud = points.reshape(\
-                    (points.shape[0]*points.shape[1], 3))[0::20]
-        pointCloud = pointCloud[pointCloud[:, 2]>0]  
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection = "3d")
-        ax.scatter(pointCloud[:,0], pointCloud[:,1], pointCloud[:,2], s=2)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
-
-        plt.show(block=True)
-
-    
-    def generateDepthMap(self):
-        """Generate depth map from disparity"""
-
         ### To do: Implement
 
         pass
+
+    
+    def setBaseline(self, baseline):
+        """Use to set the baseline for the stereo rig"""
+        self.baseline = baseline
+
+    
+    def generateDepthMap(self, imageProcessor):
+        """Generate depth map from disparity"""
+        # Get focal length from projection matrix
+        focalLength = imageProcessor.projectionMatrixL[0][0]
+
+        self.disparityMapL[self.disparityMapL==0] = 0.9
+        self.disparityMapL[self.disparityMapL==-1] = 0.9
+
+        self.depthMap = np.empty_like(self.disparityMapL)
+        self.depthMap = (focalLength*self.baseline)/self.disparityMapL[:]
+
+    
+    def writePly(self, points, imageL):
+        """Export current point cloud as a .ply"""
+        plyHeader = "\n".join([\
+                    "format ascii 1.0",
+                    "element vertex %(vert_num)d",
+                    "property float x",
+                    "property float y",
+                    "property float z",
+                    "property uchar red",
+                    "property uchar green",
+                    "property uchar blue",
+                    "end_header"])
+
+        mask = self.disparityMapL > self.disparityMapL.min()
+        vertices = points[mask]
+        colors = cv2.cvtColor(imageL, cv2.COLOR_BGR2RGB)
+        colors = colors[mask]
+        vertices = vertices.reshape(-1, 3)
+        colors = colors.reshape(-1, 3)
+        vertices = np.hstack([vertices, colors])
+
+        timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
+        fileName = "".join(["pointCloud_", timeString, ".ply"])
+
+        with open(fileName, 'wb') as plyFile:
+            plyFile.write((plyHeader % dict(vert_num=len(vertices)))\
+                                                        .encode('utf-8'))
+            np.savetxt(plyFile, vertices, fmt='%f %f %f %d %d %d ')
+                    
 
 
     def captureImages(self, imageProcessor, path="captures/testImages"):
@@ -252,8 +274,11 @@ class StereoMatcher:
             print("Exiting disparity preview")
             return False
 
-        elif key == Keys.p: # Generate point cloud on space
+        elif key == Keys.p: # Generate point cloud on p
             self.generatePointCloud()
+
+        elif key == Keys.z: # Generate depth map on z
+            self.generateDepthMap(imageProcessor)
 
         elif key == Keys.space: # Capture images on space
             self.captureImages(imageProcessor)
