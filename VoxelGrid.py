@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
 from helperScripts.TimeKeeper import TimeKeeper
@@ -7,13 +8,12 @@ from helperScripts.TimeKeeper import TimeKeeper
 class VoxelGrid:
     """Class to process and handle voxelized representation of 
     pointclouds"""
-    def __init__(self, voxelSize, stereoMatcher):
+    def __init__(self, stereoMatcher, voxelSize=50):
         # Paramaters
-        self.voxelSize = voxelSize
+        self.voxelSize = voxelSize # in mm
 
         # StereoMatcher
         self.stereoMatcher = stereoMatcher
-        self.stereoMatcher.referenceVoxelGrid(self)
         
         # Debug
         self.verbose = True
@@ -75,4 +75,24 @@ class VoxelGrid:
                                     [-1,  0,  0],
                                     [ 0,  1,  0] ])
         self.pointCloud = np.dot(self.pointCloud[:], rotationMatrix)
+        
+
+    def displayPointCloud(self):
+        """Display the generated unfiltered/filtered point cloud using 
+        matplotlib. Blocks until exit"""
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection="3d")
+
+        ax.scatter(self.pointCloud[:,0], \
+                   self.pointCloud[:,1], \
+                   self.pointCloud[:,2], s=1)
+
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        ax.set_zlabel("$z$")
+
+        # Assuming camera axis begins at 0
+        ax.set_ylim(0,)
+
+        plt.show(block=True)
         
