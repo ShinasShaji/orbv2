@@ -8,17 +8,19 @@ import numpy as np
 
 from helperScripts import jsonHelper
 from StereoMatcher import StereoMatcher
+from VoxelGrid import VoxelGrid
 
 
-class ImageProcessing(multiprocessing.Process):
+class ImageProcessor(multiprocessing.Process):
     """Class to handle image processing on capture stream"""
     def __init__(self, vertical=True):
-        super(ImageProcessing, self).__init__()
+        super(ImageProcessor, self).__init__()
 
         # Flags
         # Vertical or horizontal stereo rig
         self.vertical = vertical
 
+        # Debug
         self.verbose = False
 
         # Capture link
@@ -247,8 +249,9 @@ class ImageProcessing(multiprocessing.Process):
 
         self.stereoMatcher = StereoMatcher("SGBM", \
                 vertical=self.vertical, createRightMatcher=False)
-        self.stereoMatcher.referenceDispToDepthMatrix(\
-                self.dispToDepthMatrix)
+        self.stereoMatcher.referenceImageProcessor(self)
+
+        self.voxelGrid = VoxelGrid(stereoMatcher=self.stereoMatcher)
 
         self.initUndistortRectifyMap()
 
