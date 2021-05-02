@@ -3,7 +3,7 @@ import multiprocessing
 import time
 
 import cv2
-import numpy
+import numpy as np
 
 
 class StereoCapture(multiprocessing.Process):
@@ -83,12 +83,12 @@ class StereoCapture(multiprocessing.Process):
             1, lock=False)
 
         # Creating arrays from memory buffers
-        self.imageL = numpy.frombuffer(self.leftImageBuffer, \
-                            dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.imageR = numpy.frombuffer(self.rightImageBuffer, \
-                            dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
-                            dtype=numpy.float64)
+        self.imageL = np.frombuffer(self.leftImageBuffer, \
+                            dtype=np.uint8).reshape(self.cvImageShape)
+        self.imageR = np.frombuffer(self.rightImageBuffer, \
+                            dtype=np.uint8).reshape(self.cvImageShape)
+        self.captureTime = np.frombuffer(self.captureTimeBuffer,\
+                            dtype=np.float64)
 
         self.bufferReady = True
         print("Initialized capture buffers")

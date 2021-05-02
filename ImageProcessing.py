@@ -4,7 +4,7 @@ import os
 import time
 
 import cv2
-import numpy
+import numpy as np
 
 from helperScripts import jsonHelper
 from StereoMatcher import StereoMatcher
@@ -48,12 +48,12 @@ class ImageProcessing(multiprocessing.Process):
         self.imageResolution = (self.cvImageShape[1], self.cvImageShape[0])
 
         # Creating arrays from memory buffers
-        self.imageL = numpy.frombuffer(self.leftImageBuffer, \
-                            dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.imageR = numpy.frombuffer(self.rightImageBuffer, \
-                            dtype=numpy.uint8).reshape(self.cvImageShape)
-        self.captureTime = numpy.frombuffer(self.captureTimeBuffer,\
-                            dtype=numpy.float64)
+        self.imageL = np.frombuffer(self.leftImageBuffer, \
+                            dtype=np.uint8).reshape(self.cvImageShape)
+        self.imageR = np.frombuffer(self.rightImageBuffer, \
+                            dtype=np.uint8).reshape(self.cvImageShape)
+        self.captureTime = np.frombuffer(self.captureTimeBuffer,\
+                            dtype=np.float64)
         
         self.captureBufferReady = True
 
@@ -99,7 +99,7 @@ class ImageProcessing(multiprocessing.Process):
 
     ### Methods to preview and save capture 
 
-    def captureImages(self, path="captures/"):
+    def captureImages(self, imageFormat=".png", path="captures/"):
         """Capture and save images from both cameras"""
         if self.vertical:
             fileNames = [("top", self.imageL), ("bottom", self.imageR)]
@@ -110,7 +110,8 @@ class ImageProcessing(multiprocessing.Process):
         timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
 
         for (camera, frame) in fileNames:
-            imageName = "".join([camera, "_{}.png".format(timeString)])
+            imageName = "".join([camera, "_{}{}".format(timeString, \
+                                                imageFormat)])
             cv2.imwrite(os.path.join(path, imageName), frame)
             print("Saved {} to {}".format(imageName, path))
 
@@ -170,7 +171,7 @@ class ImageProcessing(multiprocessing.Process):
                 epipolarImageL[line*20,:]= 255
                 epipolarImageR[line*20,:]= 255
 
-        return numpy.hstack([epipolarImageL, \
+        return np.hstack([epipolarImageL, \
                                             epipolarImageR])
 
 
@@ -184,7 +185,7 @@ class ImageProcessing(multiprocessing.Process):
                 epipolarImageL[:,line*20]= 255
                 epipolarImageR[:,line*20]= 255
 
-        return numpy.vstack([epipolarImageL, \
+        return np.vstack([epipolarImageL, \
                                             epipolarImageR])
 
     
@@ -307,13 +308,13 @@ class ImageProcessing(multiprocessing.Process):
         dataDict = jsonHelper.jsonToDict(path)
 
         # Left
-        self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])
-        self.distortionCoeffsL = numpy.array(\
+        self.cameraMatrixL = np.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = np.array(\
                                     dataDict["left"]["distortionCoeffs"])
 
         # Right
-        self.cameraMatrixR = numpy.array(dataDict["right"]["cameraMatrix"])
-        self.distortionCoeffsR = numpy.array(\
+        self.cameraMatrixR = np.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = np.array(\
                                     dataDict["right"]["distortionCoeffs"])
 
         print("Loaded mono calibration")
@@ -351,23 +352,23 @@ class ImageProcessing(multiprocessing.Process):
         dataDict = jsonHelper.jsonToDict(path)
 
         # Left
-        self.cameraMatrixL = numpy.array(dataDict["left"]["cameraMatrix"])
-        self.distortionCoeffsL = numpy.array(\
+        self.cameraMatrixL = np.array(dataDict["left"]["cameraMatrix"])
+        self.distortionCoeffsL = np.array(\
                                     dataDict["left"]["distortionCoeffs"])
 
         # Right
-        self.cameraMatrixR = numpy.array(dataDict["right"]["cameraMatrix"])
-        self.distortionCoeffsR = numpy.array(\
+        self.cameraMatrixR = np.array(dataDict["right"]["cameraMatrix"])
+        self.distortionCoeffsR = np.array(\
                                     dataDict["right"]["distortionCoeffs"])
 
         # Common
-        self.stereoRotationMatrix = numpy.array(\
+        self.stereoRotationMatrix = np.array(\
                                     dataDict["stereoRotationMatrix"])
-        self.stereoTranslationMatrix = numpy.array(\
+        self.stereoTranslationMatrix = np.array(\
                                     dataDict["stereoTranslationMatrix"])
 
-        self.essentialMatrix = numpy.array(dataDict["essentialMatrix"]) 
-        self.fundamentalMatrix = numpy.array(dataDict["fundamentalMatrix"])
+        self.essentialMatrix = np.array(dataDict["essentialMatrix"]) 
+        self.fundamentalMatrix = np.array(dataDict["fundamentalMatrix"])
 
         # Image size
         self.grayImageSizeL = tuple(dataDict["grayImageSizeL"])
@@ -387,21 +388,21 @@ class ImageProcessing(multiprocessing.Process):
         dataDict = jsonHelper.jsonToDict(path)
 
         # Left
-        self.rotationMatrixL = numpy.array(\
+        self.rotationMatrixL = np.array(\
                                     dataDict["left"]["rotationMatrix"])
-        self.projectionMatrixL = numpy.array(\
+        self.projectionMatrixL = np.array(\
                                     dataDict["left"]["projectionMatrix"])
 
         # Right
-        self.rotationMatrixR = numpy.array(\
+        self.rotationMatrixR = np.array(\
                                     dataDict["right"]["rotationMatrix"])
-        self.projectionMatrixR = numpy.array(\
+        self.projectionMatrixR = np.array(\
                                     dataDict["right"]["projectionMatrix"])
 
         # Common
         # Q matrix
-        self.dispToDepthMatrix = numpy.array(\
-                        dataDict["dispToDepthMatrix"], dtype=numpy.float32)
+        self.dispToDepthMatrix = np.array(\
+                        dataDict["dispToDepthMatrix"], dtype=np.float32)
 
         print("Loaded stereo rectification data")
 
