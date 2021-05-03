@@ -1,3 +1,5 @@
+import threading
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,12 +10,25 @@ from helperScripts.TimeKeeper import TimeKeeper
 class VoxelGrid:
     """Class to process and handle voxelized representation of 
     pointclouds"""
-    def __init__(self, stereoMatcher, voxelSize=50):
-        # Paramaters
-        self.voxelSize = voxelSize # in mm
+    def __init__(self, stereoMatcher, imageProcessor, pointSubsample=20, \
+                                    voxelSize=100, occupancyThreshold=10):
 
-        # StereoMatcher
+        # Paramaters
+        # Size of each voxel in mm
+        self.voxelSize = voxelSize
+        # Fraction of raw points taken
+        self.pointSubsample = int(pointSubsample)
+        # Stop voxelizing when less than this fraction of points remain
+        self.voxelStopFraction = 10 
+        # Minimum number of points after a voxel is marked occupied
+        self.occupancyThreshold = occupancyThreshold
+
+        # Voxel grid
+        self.voxelGrid = None
+
+        # Object references
         self.stereoMatcher = stereoMatcher
+        self.imageProcessor = imageProcessor
         
         # Debug
         self.verbose = True
@@ -29,11 +44,11 @@ class VoxelGrid:
 
         points = cv2.reprojectImageTo3D(\
                             self.stereoMatcher.disparityMapL, \
-                            self.stereoMatcher.dispToDepthMatrix)
+                            self.imageProcessor.dispToDepthMatrix)
 
         # Reshaping to a list of 3D coordinates
         self.pointCloud = points.reshape(\
-                        (points.shape[0]*points.shape[1],3))[0::16]\
+            (points.shape[0]*points.shape[1],3))[0::self.pointSubsample]\
                                                 .astype(np.int16)
 
         if self.verbose:
@@ -44,7 +59,7 @@ class VoxelGrid:
 
     
     def filterPointCloud(self):
-        """Filter extreme points from the generate point cloud"""
+        """Filter extreme points from the generated point cloud"""
         if self.verbose:
             self.timeKeeper.startPerfCounter()
 
@@ -74,25 +89,118 @@ class VoxelGrid:
         rotationMatrix = np.array([ [ 0,  0, -1],
                                     [-1,  0,  0],
                                     [ 0,  1,  0] ])
+        self.rotatePointCloud(rotationMatrix)
+
+
+    def rotatePointCloud(self, rotationMatrix):
+        """Rotate the point cloud using the given rotation matrix"""
         self.pointCloud = np.dot(self.pointCloud[:], rotationMatrix)
         
 
-    def displayPointCloud(self):
-        """Display the generated unfiltered/filtered point cloud using 
-        matplotlib. Blocks until exit"""
+    def displayGrid_Internal(self, grid):
+        """Display the generated unfiltered/filtered point clouds or
+        voxel grids using matplotlib. Calling without a separate thread
+        will block the calling thread"""
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
 
-        ax.scatter(self.pointCloud[:,0], \
-                   self.pointCloud[:,1], \
-                   self.pointCloud[:,2], s=1)
+        ax.scatter(grid[:,0], \
+                   grid[:,1], \
+                   grid[:,2])
 
         ax.set_xlabel("$x$")
         ax.set_ylabel("$y$")
         ax.set_zlabel("$z$")
 
         # Assuming camera axis begins at 0
-        ax.set_ylim(0,)
+        ax.set_xlim(-1000,1000)
+        ax.set_ylim(0,2000)
+        ax.set_zlim(-1000,1000)
 
         plt.show(block=True)
+
+    
+    def resetVoxelGrid(self):
+        """Reinitialize voxel grid"""
+        self.voxelGrid = None
+
+
+    def displayGrid(self, grid):
+        """Display the generated unfiltered/filtered point clouds or
+        voxel grids using matplotlib"""
+        displayThread = threading.Thread(\
+            target=self.displayGrid_Internal, \
+            args=(grid,))
+        displayThread.start()
+
+    
+    def voxelizePointCloud(self):
+        """Create a voxel grid representation of the point cloud. 
+        Filter the point cloud before voxelizing"""
+        if self.verbose:
+            self.timeKeeper.startPerfCounter()
+
+        iterations = 0
+        voxelGrid = []
+        initialSize = self.pointCloud.shape[0]
+        remainingPoints = initialSize
         
+        while remainingPoints>(initialSize/self.voxelStopFraction):
+
+            sampledPoint = \
+                self.pointCloud[np.random.randint(0,remainingPoints)]
+
+            samplingLimit = np.empty_like(sampledPoint)
+            for n in range(len(sampledPoint)):
+                samplingLimit[n]=\
+                    (sampledPoint[n]//self.voxelSize)*self.voxelSize
+
+            mask = np.ones(remainingPoints, dtype=bool)
+
+            for n in range(len(sampledPoint)):
+                mask = np.logical_and(mask, np.logical_and(\
+                    self.pointCloud[:,n]>=samplingLimit[n], \
+                    self.pointCloud[:,n]<samplingLimit[n]+self.voxelSize))
+
+            pointsInVoxel = self.pointCloud[mask]
+
+            if len(pointsInVoxel)>self.occupancyThreshold:
+                voxelMidpoint = samplingLimit+self.voxelSize/2
+                voxelGrid.append(voxelMidpoint)
+
+            self.pointCloud = self.pointCloud[np.invert(mask)]
+
+            iterations+=1
+
+            remainingPoints = self.pointCloud.shape[0]
+
+        voxelGrid = np.array(voxelGrid, dtype=np.int16)
+
+        if self.voxelGrid is None:
+            self.voxelGrid = voxelGrid
+
+        else:
+            self.voxelGrid = np.unique(\
+                    np.vstack((self.voxelGrid, voxelGrid)), axis=0)
+
+        if self.verbose:
+            print("".join(["Voxels in grid: {}; ",\
+                    "completed in {:.5f} sec; {} iterations"]).format(\
+                    self.voxelGrid.shape[0], \
+                    self.timeKeeper.returnPerfCounter(), \
+                    iterations))
+
+
+    def viewVoxelGrid(self):
+        """Compute and display voxel grid"""
+        self.generatePointCloud()
+        self.filterPointCloud()
+        self.redefinePointCloudCoordinate()
+        self.voxelizePointCloud()
+        self.displayGrid(self.voxelGrid)
+
+
+
+if __name__=="__main__":
+    print("Import to use")
+    
