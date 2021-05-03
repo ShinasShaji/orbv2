@@ -123,6 +123,7 @@ class VoxelGrid:
     def resetVoxelGrid(self):
         """Reinitialize voxel grid"""
         self.voxelGrid = None
+        print("Voxel grid reset")
 
 
     def displayGrid(self, grid):

@@ -1,6 +1,5 @@
 import datetime
 import multiprocessing
-import os
 import time
 
 import cv2
@@ -114,7 +113,7 @@ class ImageProcessor(multiprocessing.Process):
         for (camera, frame) in fileNames:
             imageName = "".join([camera, "_{}".format(timeString), \
                                                     imageFormat])
-            cv2.imwrite(os.path.join(path, imageName), frame)
+            cv2.imwrite("".join([path, imageName]), frame)
             print("Saved {} to {}".format(imageName, path))
 
     

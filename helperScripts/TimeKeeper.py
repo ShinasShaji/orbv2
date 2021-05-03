@@ -2,6 +2,7 @@ import time
 
 
 class TimeKeeper:
+    """Class to keep time of operations"""
     def __init__(self):
         pass
 
@@ -17,3 +18,4 @@ class TimeKeeper:
         self.perfCounter[1] = time.perf_counter()
 
         return (self.perfCounter[1]-self.perfCounter[0])
+        
