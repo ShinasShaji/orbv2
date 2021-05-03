@@ -177,12 +177,16 @@ class VoxelGrid:
 
         voxelGrid = np.array(voxelGrid, dtype=np.int16)
 
+        ### These steps will potentially need to be changed
+
         if self.voxelGrid is None:
             self.voxelGrid = voxelGrid
 
         else:
             self.voxelGrid = np.unique(\
                     np.vstack((self.voxelGrid, voxelGrid)), axis=0)
+
+        ###
 
         if self.verbose:
             print("".join(["Voxels in grid: {}; ",\
