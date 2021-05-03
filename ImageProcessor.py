@@ -101,7 +101,7 @@ class ImageProcessor(multiprocessing.Process):
 
     ### Methods to preview and save capture 
 
-    def captureImages(self, imageFormat=".png", path="captures/"):
+    def captureImages(self, path="captures/", imageFormat=".png"):
         """Capture and save images from both cameras"""
         if self.vertical:
             fileNames = [("top", self.imageL), ("bottom", self.imageR)]
@@ -112,8 +112,8 @@ class ImageProcessor(multiprocessing.Process):
         timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
 
         for (camera, frame) in fileNames:
-            imageName = "".join([camera, "_{}{}".format(timeString, \
-                                                imageFormat)])
+            imageName = "".join([camera, "_{}".format(timeString), \
+                                                    imageFormat])
             cv2.imwrite(os.path.join(path, imageName), frame)
             print("Saved {} to {}".format(imageName, path))
 
@@ -247,11 +247,12 @@ class ImageProcessor(multiprocessing.Process):
         self.loadStereoCalibration()
         self.loadStereoRectify()
 
-        self.stereoMatcher = StereoMatcher("SGBM", \
-                vertical=self.vertical, createRightMatcher=False)
-        self.voxelGrid = VoxelGrid(stereoMatcher=self.stereoMatcher)
+        self.stereoMatcher = StereoMatcher(imageProcessor=self, \
+                        matcher="SGBM", vertical=self.vertical, \
+                        createRightMatcher=False)
+        self.voxelGrid = VoxelGrid(stereoMatcher=self.stereoMatcher, \
+                                    imageProcessor=self)
         
-        self.stereoMatcher.referenceImageProcessor(self)
         self.stereoMatcher.referenceVoxelGrid(self.voxelGrid)
 
         self.initUndistortRectifyMap()
@@ -295,7 +296,7 @@ class ImageProcessor(multiprocessing.Process):
                 print("Disparity compute time: {:.5f}"\
                     .format(time.time()-self.pickupTime))
 
-            if self.stereoMatcher.tuneParameters(self):
+            if self.stereoMatcher.tuneParameters():
                 self.stereoMatcher.createMatcher()
             else:
                 self.quitEvent.set()
