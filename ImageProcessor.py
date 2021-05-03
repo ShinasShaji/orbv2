@@ -108,10 +108,10 @@ class ImageProcessor(multiprocessing.Process):
         else:
             fileNames = [("left", self.imageL), ("right", self.imageR)]
 
-        timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
+        self.timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
 
         for (camera, frame) in fileNames:
-            imageName = "".join([camera, "_{}".format(timeString), \
+            imageName = "".join([camera, "_{}".format(self.timeString), \
                                                     imageFormat])
             cv2.imwrite("".join([path, imageName]), frame)
             print("Saved {} to {}".format(imageName, path))
