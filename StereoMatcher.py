@@ -11,7 +11,7 @@ from helperScripts.Keys import Keys
 
 class StereoMatcher:
     """Class to handle StereoSGBM and StereoBM stereo matchers"""
-    def __init__(self, matcher="SGBM", vertical=True, \
+    def __init__(self, imageProcessor, matcher="SGBM", vertical=True, \
                                                 createRightMatcher=False):
         assert matcher in ["SGBM", "BM"], "Invalid matcher selection"
 
@@ -20,6 +20,9 @@ class StereoMatcher:
         self.vertical = vertical
         self.hasRightMatcher = createRightMatcher
         self.parametersLoaded = False
+
+        # Object references
+        self.imageProcessor = imageProcessor
 
         # Initializing matcher
         self.loadParameters()
@@ -244,11 +247,6 @@ class StereoMatcher:
             plyFile.write((plyHeader % dict(vert_num=len(vertices)))\
                                                         .encode('utf-8'))
             np.savetxt(plyFile, vertices, fmt='%f %f %f %d %d %d ')
-                    
-
-    def referenceImageProcessor(self, imageProcessor):
-        """Create class references to passed ImageProcessor"""
-        self.imageProcessor = imageProcessor
 
     
     def referenceVoxelGrid(self, voxelGrid):
@@ -259,7 +257,7 @@ class StereoMatcher:
     def captureImages(self, path="captures/testImages"):
         """Call the image capture method of the passed ImageProcessing
         object"""
-        self.imageProcessor.captureImages(path)
+        self.imageProcessor.captureImages(path=path)
 
     
     def tuneParameters(self):
@@ -271,7 +269,10 @@ class StereoMatcher:
             return False
 
         elif key == Keys.p: # Generate point cloud on p
-            self.voxelGrid.generatePointCloud()
+            self.voxelGrid.viewVoxelGrid()
+
+        elif key == Keys.o: # Reset voxel grid on o
+            self.voxelGrid.resetVoxelGrid()
 
         elif key == Keys.z: # Generate depth map on z
             self.generateDepthMap()
