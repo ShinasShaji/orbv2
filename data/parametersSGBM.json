@@ -2,8 +2,8 @@
     "blockSize": 3,
     "disp12MaxDiff": 64,
     "kernelOrder": 3,
-    "maxDisparity": 42,
-    "minDisparity": 10,
+    "maxDisparity": 38,
+    "minDisparity": 6,
     "speckleRange": 2,
     "speckleWindowSize": 100,
     "uniquenessRatio": 10
