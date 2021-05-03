@@ -219,6 +219,17 @@ class StereoMatcher:
         self.depthMap = (focalLength*self.baseline)/self.disparityMapL[:]
 
     
+    def saveDepthMap(self, path="testImages/voxelTestImages/", \
+                                                    imageFormat=".png"):
+        """Save the current depth map"""
+        imageName = "".join(["topDepth_{}".format(\
+                        self.imageProcessor.timeString), imageFormat])
+
+        cv2.imwrite("".join([path, imageName]), \
+                                    self.depthMap.astype(np.uint16))
+        print("Saved {} to {}".format(imageName, path))
+
+    
     def writePly(self, points, imageL):
         """Export current point cloud as a .ply"""
         plyHeader = "\n".join([\
@@ -254,10 +265,19 @@ class StereoMatcher:
         self.voxelGrid = voxelGrid
 
 
-    def captureImages(self, path="captures/testImages"):
-        """Call the image capture method of the passed ImageProcessing
-        object"""
+    def captureImages(self, path="testImages/voxelTestImages/"):
+        """Call the image capture method of the referenced ImageProcessor"""
         self.imageProcessor.captureImages(path=path)
+
+    
+    def viewVoxelGrid(self):
+        """Call the voxel grid viewer method of the referenced VoxelGrid"""
+        self.voxelGrid.viewVoxelGrid()
+
+    
+    def resetVoxelGrid(self):
+        """Call the voxel grid reset method of the referenced VoxelGrid"""
+        self.voxelGrid.resetVoxelGrid()
 
     
     def tuneParameters(self):
@@ -269,16 +289,15 @@ class StereoMatcher:
             return False
 
         elif key == Keys.p: # Generate point cloud on p
-            self.voxelGrid.viewVoxelGrid()
+            self.viewVoxelGrid()
 
         elif key == Keys.o: # Reset voxel grid on o
-            self.voxelGrid.resetVoxelGrid()
-
-        elif key == Keys.z: # Generate depth map on z
-            self.generateDepthMap()
+            self.resetVoxelGrid()
 
         elif key == Keys.space: # Capture images on space
             self.captureImages()
+            self.generateDepthMap()
+            self.saveDepthMap()
 
         elif key == Keys.b: # blocksize on b
             print("blockSize: {}".format(self.blockSize))
