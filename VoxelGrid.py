@@ -23,6 +23,11 @@ class VoxelGrid:
         # Minimum number of points after a voxel is marked occupied
         self.occupancyThreshold = occupancyThreshold
 
+        # Rotation matrix to redefine camera axis
+        self.redefineRotationMatrix = np.array([ [ 0,  0, -1],
+                                                 [ 0,  1,  0],
+                                                 [ 1,  0,  0] ])
+
         # Voxel grid
         self.voxelGrid = None
 
@@ -84,12 +89,9 @@ class VoxelGrid:
 
     
     def redefinePointCloudCoordinate(self):
-        """Rotate the point cloud so that camera faces +y, with z
+        """Rotate the point cloud so that camera faces +x, with z
         vertical"""
-        rotationMatrix = np.array([ [ 0,  0, -1],
-                                    [ 0,  1,  0],
-                                    [ 1,  0,  0] ])
-        self.rotatePointCloud(rotationMatrix)
+        self.rotatePointCloud(self.redefineRotationMatrix)
 
 
     def rotatePointCloud(self, rotationMatrix):
