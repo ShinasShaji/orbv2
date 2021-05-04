@@ -11,7 +11,7 @@ class VoxelGrid:
     """Class to process and handle voxelized representation of 
     pointclouds"""
     def __init__(self, stereoMatcher, imageProcessor, pointSubsample=20, \
-                                    voxelSize=100, occupancyThreshold=10):
+                voxelSize=100, occupancyThreshold=10, voxelStopFraction=10):
 
         # Paramaters
         # Size of each voxel in mm
@@ -19,7 +19,7 @@ class VoxelGrid:
         # Fraction of raw points taken
         self.pointSubsample = int(pointSubsample)
         # Stop voxelizing when less than this fraction of points remain
-        self.voxelStopFraction = 10 
+        self.voxelStopFraction = voxelStopFraction 
         # Minimum number of points after a voxel is marked occupied
         self.occupancyThreshold = occupancyThreshold
 
@@ -87,8 +87,8 @@ class VoxelGrid:
         """Rotate the point cloud so that camera faces +y, with z
         vertical"""
         rotationMatrix = np.array([ [ 0,  0, -1],
-                                    [-1,  0,  0],
-                                    [ 0,  1,  0] ])
+                                    [ 0,  1,  0],
+                                    [ 1,  0,  0] ])
         self.rotatePointCloud(rotationMatrix)
 
 
