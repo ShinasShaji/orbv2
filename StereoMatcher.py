@@ -104,11 +104,10 @@ class StereoMatcher:
     def loadParameters(self):
         """Loads matcher parameters from json; if unavailable loads default
         parameters"""
-        if not self.parametersLoaded:
-            try:
-                self.loadParametersFromJson()
-            except:
-                self.loadDefaultParameters()
+        try:
+            self.loadParametersFromJson()
+        except:
+            self.loadDefaultParameters()
 
         
     def createSGBM(self):
