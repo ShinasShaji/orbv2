@@ -195,7 +195,7 @@ class ImageProcessor(multiprocessing.Process):
         if not self.isCapturePipelineReady():
             return
 
-        self.loadMonoCalibrationResults()
+        self.loadMonoCalibration()
         self.loadStereoCalibration()
         self.loadStereoRectify()
         self.initUndistortRectifyMap()
@@ -242,7 +242,7 @@ class ImageProcessor(multiprocessing.Process):
         if not self.isCapturePipelineReady():
             return
 
-        self.loadMonoCalibrationResults()
+        self.loadMonoCalibration()
         self.loadStereoCalibration()
         self.loadStereoRectify()
 
@@ -306,7 +306,7 @@ class ImageProcessor(multiprocessing.Process):
 
     ### Methods to load calibrations and camera properties
 
-    def loadMonoCalibrationResults(self, path="data/monoCalibration.json"):
+    def loadMonoCalibration(self, path="data/monoCalibration.json"):
         """Loads mono calibration data from given json"""
 
         dataDict = jsonHelper.jsonToDict(path)
