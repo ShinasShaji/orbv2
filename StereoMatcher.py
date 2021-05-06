@@ -218,8 +218,7 @@ class StereoMatcher:
         self.depthMap = (focalLength*self.baseline)/self.disparityMapL[:]
 
     
-    def saveDepthMap(self, path="testImages/voxelTestImages/", \
-                                                    imageFormat=".png"):
+    def saveDepthMap(self, path="captures/", imageFormat=".png"):
         """Save the current depth map"""
         imageName = "".join(["topDepth_{}".format(\
                         self.imageProcessor.timeString), imageFormat])
@@ -264,7 +263,7 @@ class StereoMatcher:
         self.voxelGrid = voxelGrid
 
 
-    def captureImages(self, path="testImages/voxelTestImages/"):
+    def captureImages(self, path="captures/"):
         """Call the image capture method of the referenced ImageProcessor"""
         self.imageProcessor.captureImages(path=path)
 

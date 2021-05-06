@@ -25,4 +25,8 @@ class TimeKeeper:
 
         print("Completed in {:.6f} seconds"\
                         .format(self.perfCounter[1]-self.perfCounter[0]))      
+
+    def getElapsedTime(self):
+        """Return elapsed time of the last session"""
+        return self.perfCounter[1]-self.perfCounter[0]
   

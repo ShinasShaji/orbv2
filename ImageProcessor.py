@@ -284,8 +284,8 @@ class ImageProcessor(multiprocessing.Process):
 
             if self.vertical:
                 cv2.imshow("Horizontal_Epipolar", \
-                    self.drawHorEpipolarLines(self.undistortImageL, \
-                        self.undistortImageR))
+                    cv2.rotate(self.drawHorEpipolarLines(self.undistortImageL, \
+                        self.undistortImageR), cv2.ROTATE_90_CLOCKWISE))
             else:
                 cv2.imshow("Vertical_Epipolar", \
                     self.drawVertEpipolarLines(self.undistortImageL, \
