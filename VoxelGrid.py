@@ -147,14 +147,14 @@ class VoxelGrid:
         voxelGrid = []
         initialSize = self.pointCloud.shape[0]
         remainingPoints = initialSize
+        samplingLimit = np.zeros_like(self.pointCloud[0])
         
         while remainingPoints>(initialSize/self.voxelStopFraction):
 
             sampledPoint = \
                 self.pointCloud[np.random.randint(0,remainingPoints)]
 
-            samplingLimit = np.empty_like(sampledPoint)
-            for n in range(len(sampledPoint)):
+            for n in range(3):
                 samplingLimit[n]=\
                     (sampledPoint[n]//self.voxelSize)*self.voxelSize
 
