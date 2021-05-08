@@ -42,7 +42,8 @@ class StereoCapture(multiprocessing.Process):
         self.frameTime = float(1/self.fps)
 
         # Events
-        self.imageEvent = multiprocessing.Event()
+        self.imageProcessorEvent = multiprocessing.Event()
+        self.visualOdometryEvent = multiprocessing.Event()
         self.quitEvent = multiprocessing.Event()
 
         # Flags
@@ -123,9 +124,14 @@ class StereoCapture(multiprocessing.Process):
             return None
 
     
-    def getCaptureEvents(self):
+    def getImageProcessorEvents(self):
         """Returns references of image, quit events"""
-        return (self.imageEvent, self.quitEvent)
+        return (self.imageProcessorEvent, self.quitEvent)
+
+    
+    def getVisualOdometryEvents(self):
+        """Returns references of image, quit events"""
+        return (self.visualOdometryEvent, self.quitEvent)
 
 
     def getFrames(self):
@@ -157,7 +163,10 @@ class StereoCapture(multiprocessing.Process):
             self.actualFrameTime = time.time() - self.previousTime
             self.remainingTime = self.frameTime - self.actualFrameTime
 
-            self.imageEvent.set()
+            # Set capture events to true
+            self.imageProcessorEvent.set()
+            self.visualOdometryEvent.set()
+            
             return True
 
         else:

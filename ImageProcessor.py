@@ -71,7 +71,7 @@ class ImageProcessor(multiprocessing.Process):
 
     def referenceCaptureEvents(self, events):
         """Create class references to passed capture events"""
-        self.imageEvent = events[0]
+        self.imageProcessorEvent = events[0]
         self.quitEvent = events[1]
 
         self.captureEventReady = True
@@ -119,9 +119,9 @@ class ImageProcessor(multiprocessing.Process):
     
     def pollCapture(self):
         """Wait for and acknowledge next frame pair loaded into buffer"""
-        if self.imageEvent.wait():
+        if self.imageProcessorEvent.wait():
             self.pickupTime = self.captureTime[0]
-            self.imageEvent.clear()
+            self.imageProcessorEvent.clear()
 
 
     def previewCapture(self):

@@ -20,7 +20,7 @@ class ProcessManager():
             self.stereoCapture.getCVImageShape())
 
         self.imageProcessor.referenceCaptureEvents(\
-            self.stereoCapture.getCaptureEvents())
+            self.stereoCapture.getImageProcessorEvents())
 
 
     def runProcesses(self, context=None):
