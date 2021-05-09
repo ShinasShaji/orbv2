@@ -10,7 +10,7 @@ from helperScripts.TimeKeeper import TimeKeeper
 class VoxelGrid:
     """Class to process and handle voxelized representation of 
     pointclouds"""
-    def __init__(self, stereoMatcher, imageProcessor, pointSubsample=20, \
+    def __init__(self, stereoMatcher, pointSubsample=20, \
                 voxelSize=100, occupancyThreshold=10, voxelStopFraction=10):
 
         # Paramaters
@@ -27,18 +27,33 @@ class VoxelGrid:
         self.redefineRotationMatrix = np.array([ [ 0,  0, -1],
                                                  [ 0,  1,  0],
                                                  [ 1,  0,  0] ])
+        # Rotation offset of left camera from body reference
+        self.rotationOffsetL = np.array([ [ 0,  0, -1],
+                                          [ 0,  1,  0],
+                                          [ 1,  0,  0] ])
+        # Position offset of left camera from body reference
+        self.positionOffsetL = np.array([0, 0, 0])
 
         # Voxel grid
         self.voxelGrid = None
 
         # Object references
         self.stereoMatcher = stereoMatcher
-        self.imageProcessor = imageProcessor
         
         # Debug
         self.verbose = True
         if self.verbose:
             self.timeKeeper = TimeKeeper()
+
+
+    def getRotationOffsetL(self):
+        """Return rotation offset of left camera from body reference"""
+        return self.rotationOffsetL
+
+    
+    def getPositionOffsetL(self):
+        """Return position offset of left camera from body reference"""
+        return self.positionOffsetL
 
 
     def generatePointCloud(self):
@@ -48,8 +63,8 @@ class VoxelGrid:
             self.timeKeeper.startPerfCounter()
 
         points = cv2.reprojectImageTo3D(\
-                            self.stereoMatcher.disparityMapL, \
-                            self.imageProcessor.dispToDepthMatrix)
+                    self.stereoMatcher.disparityMapL, \
+                    self.stereoMatcher.imageProcessor.dispToDepthMatrix)
 
         # Reshaping to a list of 3D coordinates
         self.pointCloud = points.reshape(\

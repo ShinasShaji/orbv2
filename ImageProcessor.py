@@ -32,6 +32,17 @@ class ImageProcessor(multiprocessing.Process):
         self.stereoCalibrationLoaded = False
         self.stereoRectifyLoaded = False
 
+        # Loading calibration data
+        self.loadMonoCalibration()
+        self.loadCameraProperties()
+        self.loadStereoCalibration()
+        self.loadStereoRectify()
+
+        # Initializing dependent objects
+        self.stereoMatcher = StereoMatcher(imageProcessor=self, \
+                            matcher="SGBM", vertical=self.vertical, \
+                            createRightMatcher=False)
+
 
     ### Methods to link up with capture process
 
@@ -97,6 +108,11 @@ class ImageProcessor(multiprocessing.Process):
         else:
             return True
 
+        
+    def getCameraMatrixL(self):
+        """Return left camera matrix"""
+        return self.cameraMatrixL        
+
 
     ### Methods to preview and save capture 
 
@@ -121,6 +137,7 @@ class ImageProcessor(multiprocessing.Process):
         """Wait for and acknowledge next frame pair loaded into buffer"""
         if self.imageProcessorEvent.wait():
             self.pickupTime = self.captureTime[0]
+            
             self.imageProcessorEvent.clear()
 
 
@@ -195,9 +212,6 @@ class ImageProcessor(multiprocessing.Process):
         if not self.isCapturePipelineReady():
             return
 
-        self.loadMonoCalibration()
-        self.loadStereoCalibration()
-        self.loadStereoRectify()
         self.initUndistortRectifyMap()
 
         if self.vertical:
@@ -241,18 +255,6 @@ class ImageProcessor(multiprocessing.Process):
         """Compute and preview disparity map"""
         if not self.isCapturePipelineReady():
             return
-
-        self.loadMonoCalibration()
-        self.loadStereoCalibration()
-        self.loadStereoRectify()
-
-        self.stereoMatcher = StereoMatcher(imageProcessor=self, \
-                        matcher="SGBM", vertical=self.vertical, \
-                        createRightMatcher=False)
-        self.voxelGrid = VoxelGrid(stereoMatcher=self.stereoMatcher, \
-                                    imageProcessor=self)
-        
-        self.stereoMatcher.referenceVoxelGrid(self.voxelGrid)
 
         self.initUndistortRectifyMap()
 

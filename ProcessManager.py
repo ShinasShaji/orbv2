@@ -33,6 +33,15 @@ class ProcessManager():
 
         self.visualOdometry.referenceCaptureEvents(\
             self.stereoCapture.getVisualOdometryEvents())
+        
+        self.visualOdometry.setCameraMatrixL(\
+            self.imageProcessor.getCameraMatrixL())
+
+        self.visualOdometry.setRotationOffsetL(\
+            self.imageProcessor.stereoMatcher.voxelGrid.getRotationOffsetL())
+
+        self.visualOdometry.setPositionOffsetL(\
+            self.imageProcessor.stereoMatcher.voxelGrid.getPositionOffsetL())
 
 
     def runProcesses(self, context=None):
