@@ -83,7 +83,7 @@ class StereoCapture(multiprocessing.Process):
         self.captureTimeBuffer = multiprocessing.Array(ctypes.c_double, \
             1, lock=False)
 
-        # Creating arrays from memory buffers
+        # Creating arrays from shared memory buffers
         self.imageL = np.frombuffer(self.leftImageBuffer, \
                             dtype=np.uint8).reshape(self.cvImageShape)
         self.imageR = np.frombuffer(self.rightImageBuffer, \

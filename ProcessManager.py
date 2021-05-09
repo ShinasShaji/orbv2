@@ -1,11 +1,13 @@
 from ImageProcessor import ImageProcessor
 from StereoCapture import StereoCapture
+from VisualOdometry import VisualOdometry
 
 
 class ProcessManager():
     def __init__(self):
         self.stereoCapture = StereoCapture()
         self.imageProcessor = ImageProcessor()
+        self.visualOdometry = VisualOdometry()
 
         self.possibleContexts = ["preview", "previewDisparity", \
             "previewUndistort"]
@@ -21,6 +23,16 @@ class ProcessManager():
 
         self.imageProcessor.referenceCaptureEvents(\
             self.stereoCapture.getImageProcessorEvents())
+
+        
+    def prepareVisualOdometryPipeline(self):
+        """References bufers and events required for visual odometry"""
+        self.visualOdometry.referenceCaptureBuffers(\
+            self.stereoCapture.getBuffers(), \
+            self.stereoCapture.getCVImageShape())
+
+        self.visualOdometry.referenceCaptureEvents(\
+            self.stereoCapture.getVisualOdometryEvents())
 
 
     def runProcesses(self, context=None):
