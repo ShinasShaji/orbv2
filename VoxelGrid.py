@@ -45,6 +45,9 @@ class VoxelGrid:
         if self.verbose:
             self.timeKeeper = TimeKeeper()
 
+        # Flags
+        self.stateBufferReady = False
+
 
     def getRotationOffsetL(self):
         """Return rotation offset of left camera from body reference"""
@@ -54,6 +57,35 @@ class VoxelGrid:
     def getPositionOffsetL(self):
         """Return position offset of left camera from body reference"""
         return self.positionOffsetL
+
+    
+    def referenceStateBuffers(self, buffers, bufferLength):
+        """Create class references to passed state buffers"""
+        # Creating class references to buffers
+        assert buffers is not None and bufferLength is not None, \
+                                            "Initialize state buffers"
+        self.rotationBuffer = buffers[0]
+        self.positionBuffer = buffers[1]
+
+        self.stateBufferLength = bufferLength
+
+        # Creating wrapper arrays from memory buffers
+        self.rotationEstimateWrapper = np.frombuffer(self.rotationBuffer, \
+                        dtype=np.float64).reshape((self.bufferLength, 3, 3))
+        self.positionEstimateWrapper = np.frombuffer(self.positionBuffer, \
+                        dtype=np.float64).reshape((self.bufferLength, 4))
+
+        self.stateBufferReady = True
+
+    
+    def isStateBufferReady(self):
+        """Check if capture buffers have been referenced"""
+        if self.stateBufferReady:
+            return True
+        
+        else:
+            print("State buffers not referenced")
+            return False
 
 
     def generatePointCloud(self):

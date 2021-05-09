@@ -63,29 +63,57 @@ class VisualOdometry(multiprocessing.Process):
 
     def createStateBuffers(self):
         """Create buffers for state (position and rotation)"""
-        # Initialize deques for copying into shared arrays
-        self.trajectoryStack = deque(maxlen=self.bufferLength)
-        self.rotationStack = deque(maxlen=self.bufferLength)
-
         # Creating shared memory buffers
-        # Trajectory state buffer of nx4 size (x,y,z,time)
-        self.trajectoryBuffer = multiprocessing.Array(ctypes.c_double, \
-                        self.bufferLength*4, lock=False)
         # Rotation state buffer of nx3x3 size
         self.rotationBuffer = multiprocessing.Array(ctypes.c_double, \
                         self.bufferLength*3*3, lock=False)
+        # Trajectory state buffer of nx4 size (x,y,z,time)
+        self.positionBuffer = multiprocessing.Array(ctypes.c_double, \
+                        self.bufferLength*4, lock=False)
 
         # Creating arrays from shared memory buffers
-        self.positionEstimateWrapper = np.frombuffer(self.trajectoryBuffer, \
-                        dtype=np.float64).reshape((self.bufferLength, 4))
         self.rotationEstimateWrapper = np.frombuffer(self.rotationBuffer, \
                         dtype=np.float64).reshape((self.bufferLength, 3, 3))
+        self.positionEstimateWrapper = np.frombuffer(self.positionBuffer, \
+                        dtype=np.float64).reshape((self.bufferLength, 4))
 
-        self.positionEstimateWrapper[:] = 0
-        self.rotationEstimateWrapper[:] = 0
+        self.flushStateBuffers()
 
         self.stateBufferReady = True
         print("Initialized visual odometry state buffers")
+
+
+    def flushStateBuffers(self):
+        """Write zeros to position and rotation buffers"""
+        self.rotationEstimateWrapper[:] = 0
+        self.positionEstimateWrapper[:] = 0
+
+    
+    def writeStateStacksToBuffers(self):
+        """Write contents of state stacks to the state buffers"""
+        self.rotationBuffer[:len(self.rotationEstimateStack)] = \
+                                            self.rotationEstimateStack
+        self.positionBuffer[:len(self.positionEstimateStack)] = \
+                                            self.positionEstimateStack
+
+    
+    def getStateBuffers(self):
+        """Return references of internal position, rotation state buffers"""
+        if self.isStateBufferReady():
+            return (self.rotationBuffer, self.positionBuffer)
+
+        else:
+            return None
+        
+
+    def getBufferLength(self):
+        """Return length of state buffers"""
+        if self.stateBufferReady:
+            return self.bufferLength
+
+        else:
+            print("State buffers not initialized")
+            return None
 
     
     def isCaptureBufferReady(self):
@@ -128,12 +156,13 @@ class VisualOdometry(multiprocessing.Process):
     
 
     def isStateBufferReady(self):
-        """Check if the state buffers have been created"""
+        """Check if state buffers have been initialized"""
         if self.stateBufferReady:
             return True
         
         else:
             print("State buffers not initialized")
+            return False
 
     
     def isVisualOdometryPipelineReady(self):
@@ -172,6 +201,7 @@ class VisualOdometry(multiprocessing.Process):
     
     def initializeState(self):
         """Initialize state estimates"""
+        # Initialize deques to hold a running list of estimates
         self.rotationEstimateStack = deque(maxlen=self.bufferLength)
         self.positionEstimateStack = deque(maxlen=self.bufferLength)
 
@@ -181,6 +211,11 @@ class VisualOdometry(multiprocessing.Process):
         self.positionEstimateStack.appendleft(\
                     np.hstack((self.positionOffsetL, time.time())))
 
+        # Initializing state buffers
+        self.flushStateBuffers()
+        self.writeStateStacksToBuffers()
+
+        # Initialize state estimates
         self.R = self.rotationOffsetL.copy().T
         self.T = np.array([self.positionOffsetL.copy()]).T
         self.RT = np.hstack([self.R, self.T])
@@ -256,6 +291,7 @@ class VisualOdometry(multiprocessing.Process):
         if not self.isVisualOdometryPipelineReady():
             return
         
+        self.initializeState()
         self.createExtractorORB()
         self.pollCapture()
         self.extractFeaturesORB()
@@ -264,3 +300,8 @@ class VisualOdometry(multiprocessing.Process):
             self.pollCapture()
             self.extractFeaturesORB()
             self.matchFeaturesORB()
+
+
+
+if __name__=="__main__":
+    print("Handled by ProcessManager")

@@ -43,6 +43,10 @@ class ProcessManager():
         self.visualOdometry.setPositionOffsetL(\
             self.imageProcessor.stereoMatcher.voxelGrid.getPositionOffsetL())
 
+        self.imageProcessor.stereoMatcher.voxelGrid.referenceStateBuffers(\
+            self.visualOdometry.getStateBuffers(), \
+            self.visualOdometry.getBufferLength())
+
 
     def runProcesses(self, context=None):
         """Start processes based on context"""
