@@ -1,7 +1,6 @@
 import ctypes
 import multiprocessing
 from collections import deque
-import time
 
 import cv2
 import numpy as np
@@ -35,6 +34,9 @@ class VisualOdometry(multiprocessing.Process):
 
         # Visual odometry buffers
         self.stateBufferReady = False
+
+        # Performance metrics
+        self.timeKeeper = TimeKeeper()
 
         
     def referenceCaptureBuffers(self, buffers, cvImageShape):
@@ -209,17 +211,17 @@ class VisualOdometry(multiprocessing.Process):
         self.rotationEstimateStack.appendleft(\
                     self.rotationOffsetL.copy().T)
         self.positionEstimateStack.appendleft(\
-                    np.hstack((self.positionOffsetL, time.time())))
+                    np.hstack((self.positionOffsetL, self.pickupTime)))
 
         # Initializing state buffers
         self.flushStateBuffers()
         self.writeStateStacksToBuffers()
 
         # Initialize state estimates
-        self.R = self.rotationOffsetL.copy().T
-        self.T = np.array([self.positionOffsetL.copy()]).T
-        self.RT = np.hstack([self.R, self.T])
-        self.RT = np.vstack([self.RT, np.zeros([1, 4])])
+        self.R = self.rotationOffsetL.copy().T              # 3x3 matrix
+        self.T = np.array([self.positionOffsetL.copy()]).T  # 3x1 matrix
+        self.RT = np.hstack([self.R, self.T])               # 3x4 matrix
+        self.RT = np.vstack([self.RT, np.zeros([1, 4])])    # 4x4 matrix
         self.RT[-1, -1] = 1
 
     
@@ -283,7 +285,27 @@ class VisualOdometry(multiprocessing.Process):
 
     def updateStateEstimate(self):
         """Update state estimate with estimated motion"""
-        pass
+        self.RTMatrix = np.hstack([self.rotationMatrix, self.translationVector])
+        self.RTMatrix = np.vstack([self.RTMatrix, np.zeros([1, 4])])
+        self.RTMatrix[-1, -1] = 1
+
+        self.RTMatrixInverse = np.linalg.inv(self.RTMatrix)
+        
+        self.RT = np.dot(self.RT, self.RTMatrixInverse)
+
+        rotationEstimate = self.RT[:3, :3]
+
+        positionEstimate = self.RT[:3, 3]
+        positionEstimate = np.hstack([positionEstimate*10, self.pickupTime])
+        
+        self.rotationEstimateStack.appendleft(rotationEstimate)
+        self.positionEstimateStack.appendleft(positionEstimate)
+
+        if self.verbose:
+            print("\nUpdated rotation estimate: \n", rotationEstimate)
+            print("Updated position estimate: \n", positionEstimate)
+
+        self.writeStateStacksToBuffers()
 
 
     def estimateStateRunning(self):
@@ -291,15 +313,29 @@ class VisualOdometry(multiprocessing.Process):
         if not self.isVisualOdometryPipelineReady():
             return
         
-        self.initializeState()
         self.createExtractorORB()
         self.pollCapture()
+        self.initializeState()
         self.extractFeaturesORB()
 
         while not self.quitEvent.is_set():
+            if self.verbose:
+                self.timeKeeper.startPerfCounter()
+
             self.pollCapture()
             self.extractFeaturesORB()
             self.matchFeaturesORB()
+            self.estimateMotion()
+            self.updateStateEstimate()
+
+            if self.verbose:
+                print("Visual odometry compute time: {:.5f}".format(\
+                            self.timeKeeper.returnPerfCounter()))
+
+        
+    def run(self):
+        """Runs when start() is called on this process"""
+        self.estimateStateRunning()
 
 
 
