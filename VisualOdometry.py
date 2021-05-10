@@ -10,6 +10,7 @@ from helperScripts.TimeKeeper import TimeKeeper
 
 class VisualOdometry(multiprocessing.Process):
     """Class to handle visual odometry routines"""
+    ### States refer to camera state unless mentioned otherwise ###
     def __init__(self, bufferLength=7):
         super(VisualOdometry, self).__init__()
 
@@ -23,20 +24,28 @@ class VisualOdometry(multiprocessing.Process):
 
         # Camera properties
         self.cameraMatrixL = None
-        self.rotationOffsetL = None
+        # Rotation offset of left camera from body reference
+        self.rotationOffsetL = np.array([ [ 0,  0, -1],
+                                          [ 0,  1,  0],
+                                          [ 1,  0,  0] ])
+        # Position offset of left camera from body reference
+        self.positionOffsetL = np.array([0, 0, 0])
         
-        # Debug
-        self.verbose = True
-
         # Capture link
         self.captureBufferReady = False
-        self.captureEventReady = False
 
-        # Visual odometry buffers
+        # Flags
         self.stateBufferReady = False
+
+        # Events
+        self.stateEvent = multiprocessing.Event()
 
         # Performance metrics
         self.timeKeeper = TimeKeeper()
+
+        # Debug
+        self.verbose = True
+
 
         
     def referenceCaptureBuffers(self, buffers, cvImageShape):
@@ -63,61 +72,14 @@ class VisualOdometry(multiprocessing.Process):
         self.captureBufferReady = True
 
 
-    def createStateBuffers(self):
-        """Create buffers for state (position and rotation)"""
-        # Creating shared memory buffers
-        # Rotation state buffer of nx3x3 size
-        self.rotationBuffer = multiprocessing.Array(ctypes.c_double, \
-                        self.bufferLength*3*3, lock=False)
-        # Trajectory state buffer of nx4 size (x,y,z,time)
-        self.positionBuffer = multiprocessing.Array(ctypes.c_double, \
-                        self.bufferLength*4, lock=False)
+    def referenceCaptureEvents(self, events):
+        """Create class references to passed capture events"""
+        self.visualOdometryEvent = events[0]
+        self.quitEvent = events[1]
 
-        # Creating arrays from shared memory buffers
-        self.rotationEstimateWrapper = np.frombuffer(self.rotationBuffer, \
-                        dtype=np.float64).reshape((self.bufferLength, 3, 3))
-        self.positionEstimateWrapper = np.frombuffer(self.positionBuffer, \
-                        dtype=np.float64).reshape((self.bufferLength, 4))
-
-        self.flushStateBuffers()
-
-        self.stateBufferReady = True
-        print("Initialized visual odometry state buffers")
+        self.captureEventReady = True
 
 
-    def flushStateBuffers(self):
-        """Write zeros to position and rotation buffers"""
-        self.rotationEstimateWrapper[:] = 0
-        self.positionEstimateWrapper[:] = 0
-
-    
-    def writeStateStacksToBuffers(self):
-        """Write contents of state stacks to the state buffers"""
-        self.rotationBuffer[:len(self.rotationEstimateStack)] = \
-                                            self.rotationEstimateStack
-        self.positionBuffer[:len(self.positionEstimateStack)] = \
-                                            self.positionEstimateStack
-
-    
-    def getStateBuffers(self):
-        """Return references of internal position, rotation state buffers"""
-        if self.isStateBufferReady():
-            return (self.rotationBuffer, self.positionBuffer)
-
-        else:
-            return None
-        
-
-    def getBufferLength(self):
-        """Return length of state buffers"""
-        if self.stateBufferReady:
-            return self.bufferLength
-
-        else:
-            print("State buffers not initialized")
-            return None
-
-    
     def isCaptureBufferReady(self):
         """Check if capture buffers have been referenced"""
         if self.captureBufferReady:
@@ -126,14 +88,6 @@ class VisualOdometry(multiprocessing.Process):
         else:
             print("Capture buffers not referenced")
             return False
-
-    
-    def referenceCaptureEvents(self, events):
-        """Create class references to passed capture events"""
-        self.visualOdometryEvent = events[0]
-        self.quitEvent = events[1]
-
-        self.captureEventReady = True
 
 
     def isCaptureEventReady(self):
@@ -150,12 +104,34 @@ class VisualOdometry(multiprocessing.Process):
         """Check if the capture pipeline is ready"""
         if not self.isCaptureBufferReady() or \
             not self.isCaptureEventReady():
-            print("Capture pipeline is not ready")
+            print("Capture pipeline not ready")
             return False
         
         else:
             return True
-    
+
+
+    def createStateBuffers(self):
+        """Create buffers for camera state (position and rotation)"""
+        # Creating shared memory buffers
+        # Rotation state buffer of nx3x3 size
+        self.rotationBuffer = multiprocessing.Array(ctypes.c_double, \
+                        self.bufferLength*3*3, lock=False)
+        # Trajectory state buffer of nx4 size (x,y,z,time)
+        self.positionBuffer = multiprocessing.Array(ctypes.c_double, \
+                        self.bufferLength*4, lock=False)
+
+        # Creating arrays from shared memory buffers
+        self.rotationWrapper = np.frombuffer(self.rotationBuffer, \
+                        dtype=np.float64).reshape((self.bufferLength, 3, 3))
+        self.positionWrapper = np.frombuffer(self.positionBuffer, \
+                        dtype=np.float64).reshape((self.bufferLength, 4))
+
+        self.flushStateBuffers()
+
+        self.stateBufferReady = True
+        print("Initialized visual odometry state buffers")
+
 
     def isStateBufferReady(self):
         """Check if state buffers have been initialized"""
@@ -168,29 +144,43 @@ class VisualOdometry(multiprocessing.Process):
 
     
     def isVisualOdometryPipelineReady(self):
-        """Check if the visual odometry pipeline is ready"""
+        """Check if visual odometry pipeline is ready"""
         if not self.isCapturePipelineReady() or \
             not self.isStateBufferReady():
-            print("Visual odometry pipeline is not ready")
+            print("Visual odometry pipeline not ready")
             return False
         
         else:
             return True
 
+
+    def getStateBuffers(self):
+        """Return references of internal position, rotation state buffers"""
+        if self.isStateBufferReady():
+            return (self.rotationBuffer, self.positionBuffer)
+
+        else:
+            return None
+
+    
+    def getStateEvent(self):
+        """Return reference of visual odometry state buffer write event"""
+        return self.stateEvent
         
+
+    def getBufferLength(self):
+        """Return length of state buffers"""
+        if self.stateBufferReady:
+            return self.bufferLength
+
+        else:
+            print("State buffers not initialized")
+            return None
+
+
     def setCameraMatrixL(self, cameraMatrixL):
         """Set left camera matrix"""
         self.cameraMatrixL = cameraMatrixL
-
-
-    def setRotationOffsetL(self, rotationOffsetL):
-        """Set rotation offset of left camera from body reference"""
-        self.rotationOffsetL = rotationOffsetL
-
-
-    def setPositionOffsetL(self, positionOffsetL):
-        """Set position offset of left camera from body reference"""
-        self.positionOffsetL = positionOffsetL
 
 
     def pollCapture(self):
@@ -200,17 +190,27 @@ class VisualOdometry(multiprocessing.Process):
 
             self.visualOdometryEvent.clear()
 
+
+    def flushStateBuffers(self):
+        """Write zeros to position and rotation buffers"""
+        self.stateEvent.clear()
+
+        self.rotationWrapper[:] = 0
+        self.positionWrapper[:] = 0
+
+        self.stateEvent.set()
+
     
     def initializeState(self):
         """Initialize state estimates"""
         # Initialize deques to hold a running list of estimates
-        self.rotationEstimateStack = deque(maxlen=self.bufferLength)
-        self.positionEstimateStack = deque(maxlen=self.bufferLength)
+        self.rotationStack = deque(maxlen=self.bufferLength)
+        self.positionStack = deque(maxlen=self.bufferLength)
 
         # Append to beginning of deque; newest first, oldest last
-        self.rotationEstimateStack.appendleft(\
+        self.rotationStack.appendleft(\
                     self.rotationOffsetL.copy().T)
-        self.positionEstimateStack.appendleft(\
+        self.positionStack.appendleft(\
                     np.hstack((self.positionOffsetL, self.pickupTime)))
 
         # Initializing state buffers
@@ -223,6 +223,18 @@ class VisualOdometry(multiprocessing.Process):
         self.RT = np.hstack([self.R, self.T])               # 3x4 matrix
         self.RT = np.vstack([self.RT, np.zeros([1, 4])])    # 4x4 matrix
         self.RT[-1, -1] = 1
+
+
+    def writeStateStacksToBuffers(self):
+        """Write contents of state stacks to the state buffers"""
+        self.stateEvent.clear()
+
+        self.rotationBuffer[:len(self.rotationStack)] = \
+                                            self.rotationStack
+        self.positionBuffer[:len(self.positionStack)] = \
+                                            self.positionStack
+
+        self.stateEvent.set()
 
     
     def createExtractorORB(self):
@@ -293,13 +305,15 @@ class VisualOdometry(multiprocessing.Process):
         
         self.RT = np.dot(self.RT, self.RTMatrixInverse)
 
+        # Extracting rotation estimate from RT
         rotationEstimate = self.RT[:3, :3]
-
+        # Extracting position estimate from RT
         positionEstimate = self.RT[:3, 3]
         positionEstimate = np.hstack([positionEstimate*10, self.pickupTime])
         
-        self.rotationEstimateStack.appendleft(rotationEstimate)
-        self.positionEstimateStack.appendleft(positionEstimate)
+        # Append estimates to deques
+        self.rotationStack.appendleft(rotationEstimate)
+        self.positionStack.appendleft(positionEstimate)
 
         if self.verbose:
             print("\nUpdated rotation estimate: \n", rotationEstimate)

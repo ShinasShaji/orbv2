@@ -10,7 +10,7 @@ class ProcessManager():
         self.visualOdometry = VisualOdometry()
 
         self.possibleContexts = ["preview", "previewDisparity", \
-            "previewUndistort"]
+            "previewUndistort", "assistedVoxel"]
 
 
     def prepareCapturePipeline(self):
@@ -37,15 +37,13 @@ class ProcessManager():
         self.visualOdometry.setCameraMatrixL(\
             self.imageProcessor.getCameraMatrixL())
 
-        self.visualOdometry.setRotationOffsetL(\
-            self.imageProcessor.stereoMatcher.voxelGrid.getRotationOffsetL())
-
-        self.visualOdometry.setPositionOffsetL(\
-            self.imageProcessor.stereoMatcher.voxelGrid.getPositionOffsetL())
-
         self.imageProcessor.stereoMatcher.voxelGrid.referenceStateBuffers(\
             self.visualOdometry.getStateBuffers(), \
             self.visualOdometry.getBufferLength())
+
+        self.imageProcessor.stereoMatcher.voxelGrid.\
+            referenceStateEvent(\
+            self.visualOdometry.getStateEvent())
 
 
     def runProcesses(self, context=None):
@@ -95,6 +93,23 @@ class ProcessManager():
 
             self.stereoCapture.join()
             self.imageProcessor.join()
+
+        elif self.context=="assistedVoxel":
+            """Voxel mapping assisted by Visual Odometry"""
+            # Prepare visual odometry pipeline
+            self.prepareVisualOdometryPipeline()
+
+            # Communicating context to objects
+            self.imageProcessor.setContext(self.context)
+
+            # Starting processes
+            self.stereoCapture.start()
+            self.imageProcessor.start()
+            self.visualOdometry.start()
+
+            self.stereoCapture.join()
+            self.imageProcessor.join()
+            self.visualOdometry.join()
 
 
 

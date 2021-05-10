@@ -49,7 +49,10 @@ class StereoCapture(multiprocessing.Process):
         # Flags
         self.bufferReady = False
         self.denoise = False
+
+        # Debug
         self.verbose = False
+
 
 
     def checkOpen(self):
@@ -106,6 +109,7 @@ class StereoCapture(multiprocessing.Process):
 
     
     def getCVImageShape(self):
+        """Returns shape of image for reshaping buffer"""
         if self.bufferReady:
             return self.cvImageShape
         

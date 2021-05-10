@@ -4,35 +4,30 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+from helperScripts import nputils
 from helperScripts.TimeKeeper import TimeKeeper
 
 
 class VoxelGrid:
     """Class to process and handle voxelized representation of 
     pointclouds"""
-    def __init__(self, stereoMatcher, pointSubsample=20, \
-                voxelSize=100, occupancyThreshold=10, voxelStopFraction=10):
-
+    def __init__(self, stereoMatcher):
         # Paramaters
         # Size of each voxel in mm
-        self.voxelSize = voxelSize
+        self.voxelSize = 100
         # Fraction of raw points taken
-        self.pointSubsample = int(pointSubsample)
+        self.pointSubsample = 20
         # Stop voxelizing when less than this fraction of points remain
-        self.voxelStopFraction = voxelStopFraction 
+        self.voxelStopFraction = 10 
         # Minimum number of points after a voxel is marked occupied
-        self.occupancyThreshold = occupancyThreshold
+        self.occupancyThreshold = 10
+        # Distance from camera inside which voxels may be refined
+        self.voxelCheckDistance = 1500
 
         # Rotation matrix to redefine camera axis
         self.redefineRotationMatrix = np.array([ [ 0,  0, -1],
                                                  [ 0,  1,  0],
                                                  [ 1,  0,  0] ])
-        # Rotation offset of left camera from body reference
-        self.rotationOffsetL = np.array([ [ 0,  0, -1],
-                                          [ 0,  1,  0],
-                                          [ 1,  0,  0] ])
-        # Position offset of left camera from body reference
-        self.positionOffsetL = np.array([0, 0, 0])
 
         # Voxel grid
         self.voxelGrid = None
@@ -47,16 +42,19 @@ class VoxelGrid:
 
         # Flags
         self.stateBufferReady = False
+        self.stateEventReady = False
 
+        # Camera fields of view
+        # Horizontal field of view (degrees)
+        self.fovH = ((self.stereoMatcher.imageProcessor.fovYL + \
+                    self.stereoMatcher.imageProcessor.fovYR)/4)*np.pi/180
+        self.fovH -= self.fovH/8
 
-    def getRotationOffsetL(self):
-        """Return rotation offset of left camera from body reference"""
-        return self.rotationOffsetL
+        # Vertical field of view (degrees)
+        self.fovV = ((self.stereoMatcher.imageProcessor.fovXL + \
+            self.stereoMatcher.imageProcessor.fovXR)/4)*np.pi/180
+        self.fovV -= self.fovV/8
 
-    
-    def getPositionOffsetL(self):
-        """Return position offset of left camera from body reference"""
-        return self.positionOffsetL
 
     
     def referenceStateBuffers(self, buffers, bufferLength):
@@ -70,9 +68,9 @@ class VoxelGrid:
         self.stateBufferLength = bufferLength
 
         # Creating wrapper arrays from memory buffers
-        self.rotationEstimateWrapper = np.frombuffer(self.rotationBuffer, \
+        self.rotationWrapper = np.frombuffer(self.rotationBuffer, \
                         dtype=np.float64).reshape((self.bufferLength, 3, 3))
-        self.positionEstimateWrapper = np.frombuffer(self.positionBuffer, \
+        self.positionWrapper = np.frombuffer(self.positionBuffer, \
                         dtype=np.float64).reshape((self.bufferLength, 4))
 
         self.stateBufferReady = True
@@ -86,6 +84,53 @@ class VoxelGrid:
         else:
             print("State buffers not referenced")
             return False
+
+
+    def referenceStateEvent(self, event):
+        """Create class references to passed visual odometry state buffer
+        write event"""
+        self.stateEvent = event
+
+        self.stateEventReady = True
+
+
+    def isStateEventReady(self):
+        """Check if visual odometry state event has been referenced"""
+        if self.stateEventReady:
+            return True
+
+        else:
+            print("Visual odometry state event not referenced")
+            return False
+
+
+    def isVisualOdometryPipelineReady(self):
+        """Check if visual odometry pipeline is ready"""
+        if not self.isStateBufferReady() or not \
+            self.isStateEventReady():
+            print("Visual odometry pipeline not ready")
+            return False
+        
+        else:
+            return True
+
+
+    def resetVoxelGrid(self):
+        """Reinitialize voxel grid"""
+        self.voxelGrid = None
+        print("Voxel grid reset")
+
+
+    def getStateFromBuffers(self):
+        """Get camera state at pickupTime from Visual Odometry state buffers."""
+        # Masking required estimate from buffer based on time
+        if self.stateEvent.wait():
+            mask = self.positionWrapper[:,3]==\
+                            self.stereoMatcher.imageProcessor.pickupTime
+
+            # Extracting required state estimates with mask
+            self.rotationEstimate = self.rotationWrapper[mask][0]
+            self.positionEstimate = self.positionWrapper[mask][0][:-1]
 
 
     def generatePointCloud(self):
@@ -134,56 +179,23 @@ class VoxelGrid:
                     self.pointCloud.shape[0], \
                     self.timeKeeper.returnPerfCounter()))
 
+
+    def translatePointCloud(self, positionVector):
+        """Translate point cloud by given position vector"""
+        self.pointCloud += positionVector
+
+
+    def rotatePointCloud(self, rotationMatrix):
+        """Rotate point cloud using given rotation matrix"""
+        self.pointCloud = np.dot(self.pointCloud[:], rotationMatrix)
+
     
     def redefinePointCloudCoordinate(self):
-        """Rotate the point cloud so that camera faces +x, with z
+        """Rotate point cloud so that camera faces +x, with z
         vertical"""
         self.rotatePointCloud(self.redefineRotationMatrix)
 
 
-    def rotatePointCloud(self, rotationMatrix):
-        """Rotate the point cloud using the given rotation matrix"""
-        self.pointCloud = np.dot(self.pointCloud[:], rotationMatrix)
-        
-
-    def displayGrid_Internal(self, grid):
-        """Display the generated unfiltered/filtered point clouds or
-        voxel grids using matplotlib. Calling without a separate thread
-        will block the calling thread"""
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
-
-        ax.scatter(grid[:,0], \
-                   grid[:,1], \
-                   grid[:,2])
-
-        ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$")
-        ax.set_zlabel("$z$")
-
-        # Assuming camera axis begins at 0
-        ax.set_xlim(-1000,1000)
-        ax.set_ylim(0,2000)
-        ax.set_zlim(-1000,1000)
-
-        plt.show(block=True)
-
-    
-    def resetVoxelGrid(self):
-        """Reinitialize voxel grid"""
-        self.voxelGrid = None
-        print("Voxel grid reset")
-
-
-    def displayGrid(self, grid):
-        """Display the generated unfiltered/filtered point clouds or
-        voxel grids using matplotlib"""
-        displayThread = threading.Thread(\
-            target=self.displayGrid_Internal, \
-            args=(grid,))
-        displayThread.start()
-
-    
     def voxelizePointCloud(self):
         """Create a voxel grid representation of the point cloud. 
         Filter the point cloud before voxelizing"""
@@ -191,7 +203,7 @@ class VoxelGrid:
             self.timeKeeper.startPerfCounter()
 
         iterations = 0
-        voxelGrid = []
+        newVoxelGrid = []
         initialSize = self.pointCloud.shape[0]
         remainingPoints = initialSize
         samplingLimit = np.zeros_like(self.pointCloud[0])
@@ -216,7 +228,7 @@ class VoxelGrid:
 
             if len(pointsInVoxel)>self.occupancyThreshold:
                 voxelMidpoint = samplingLimit+self.voxelSize/2
-                voxelGrid.append(voxelMidpoint)
+                newVoxelGrid.append(voxelMidpoint)
 
             self.pointCloud = self.pointCloud[np.invert(mask)]
 
@@ -224,25 +236,129 @@ class VoxelGrid:
 
             remainingPoints = self.pointCloud.shape[0]
 
-        voxelGrid = np.array(voxelGrid, dtype=np.int16)
-
-        ### These steps will potentially need to be changed
-
-        if self.voxelGrid is None:
-            self.voxelGrid = voxelGrid
-
-        else:
-            self.voxelGrid = np.unique(\
-                    np.vstack((self.voxelGrid, voxelGrid)), axis=0)
-
-        ###
+        self.newVoxelGrid = np.array(newVoxelGrid, dtype=np.int16)
 
         if self.verbose:
             print("".join(["Voxels in grid: {}; ",\
                     "completed in {:.5f} sec; {} iterations"]).format(\
-                    self.voxelGrid.shape[0], \
+                    self.newVoxelGrid.shape[0], \
                     self.timeKeeper.returnPerfCounter(), \
                     iterations))
+
+
+    def getNewVoxelGrid(self):
+        """Generate new voxel grid from disparity map"""
+        # Compute point cloud
+        self.generatePointCloud()
+        # Filter point cloud
+        self.filterPointCloud()
+        # Rotate point cloud
+        self.rotatePointCloud(self.rotationEstimate)
+        # Translate point cloud
+        self.translatePointCloud(self.positionEstimate)
+
+        # Compute new voxel grid
+        self.voxelizePointCloud()
+
+
+    def findVoxelsInRange(self):
+        """Find voxels that are within given distance from camera position 
+        in (base) voxelGrid, along with yaw and distance"""
+        # Compute distance to all voxels in grid
+        translatedVoxels = self.voxelGrid - self.positionEstimate
+        distanceToVoxels = np.linalg.norm(translatedVoxels, axis=1)
+
+        # Voxels in base grid in range of camera
+        self.voxelsInRange = \
+            self.voxelGrid[distanceToVoxels<=self.voxelCheckDistance]
+        translatedVoxelsInRange = self.voxelsInRange - self.positionEstimate
+
+        # Distance of those voxels from camera
+        self.distanceToVoxelsInRange = \
+            distanceToVoxels[distanceToVoxels<=self.voxelCheckDistance]
+
+        # Yaw of those voxels with respect to world frame translated to camera
+        self.yawToVoxelsInRange = \
+            np.arctan2(translatedVoxelsInRange[:,1], \
+                                        translatedVoxelsInRange[:,0])
+
+
+    def findCameraYawRange(self):
+        """Find camera yaw and field of view in terms of yaw"""
+        cameraDirectionVector = np.array([0,0,100])
+        cameraDirectionVector = \
+            np.dot(cameraDirectionVector, self.rotationEstimate)
+
+        self.cameraYaw = \
+            np.arctan2(cameraDirectionVector[1], cameraDirectionVector[0])
+
+        self.cameraYawRange = \
+            np.array([self.cameraYaw+self.fovH, self.cameraYaw-self.fovH])
+
+        # Wrapping around values at -180, 180 degrees
+        for n in range(len(self.cameraYawRange)):
+            if self.cameraYawRange[n]>np.pi:
+                self.cameraYawRange[n] -= 2*np.pi
+            if self.cameraYawRange[n]<=-np.pi:
+                self.cameraYawRange[n] += 2*np.pi
+
+        self.cameraYawRange = np.sort(self.cameraYawRange)[::-1]
+
+
+    def removeVoxelsInView(self):
+        """Remove voxels in base grid that are in range and in view of 
+        the camera"""
+        if self.cameraYawRange[0]>np.pi/2 and self.cameraYawRange[1]<-np.pi/2:
+            voxelsToRemove = self.voxelsInRange[np.logical_and(\
+                self.yawToVoxelsInRange[:]>self.cameraYawRange[0], \
+                self.yawToVoxelsInRange[:]<self.cameraYawRange[1]
+                )]
+        else:
+            voxelsToRemove = self.voxelsInRange[np.logical_and(\
+                self.yawToVoxelsInRange[:]<self.cameraYawRange[0], \
+                self.yawToVoxelsInRange[:]>self.cameraYawRange[1]
+                )]
+
+        if voxelsToRemove.shape[0]!=0:
+            self.voxelGrid = \
+                nputils.in1d_dot_approach(self.voxelGrid, voxelsToRemove)
+
+    
+    def combineVoxelGrids(self):
+        """Combine unique voxels from given base and new voxel grids"""
+        return np.unique(np.vstack([self.voxelGrid, self.newVoxelGrid]), axis=0)
+
+
+    def displayGrid_Internal(self, grid):
+        """Display generated unfiltered/filtered point clouds or voxel 
+        grids using matplotlib. Calling without a separate thread will 
+        block the calling thread"""
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection="3d")
+
+        ax.scatter(grid[:,0], \
+                   grid[:,1], \
+                   grid[:,2])
+
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        ax.set_zlabel("$z$")
+
+        # Assuming camera axis begins at 0
+        ax.set_xlim(-1000,1000)
+        ax.set_ylim(0,2000)
+        ax.set_zlim(-1000,1000)
+
+        plt.show(block=True)
+
+
+    def displayGrid(self, grid):
+        """Display the generated unfiltered/filtered point clouds or
+        voxel grids using matplotlib"""
+        displayThread = threading.Thread(\
+                    target=self.displayGrid_Internal, args=(grid,))
+
+        displayThread.start()
 
 
     def viewVoxelGrid(self):
@@ -252,6 +368,23 @@ class VoxelGrid:
         self.redefinePointCloudCoordinate()
         self.voxelizePointCloud()
         self.displayGrid(self.voxelGrid)
+
+    
+    def assistedVoxelMapping(self):
+        """Voxel mapping routine assisted by Visual Odometry"""
+        self.getStateFromBuffers()
+
+        self.getNewVoxelGrid()
+
+        if self.voxelGrid is not None:
+            self.findCameraYawRange()
+            self.findVoxelsInRange()
+            self.removeVoxelsInView()
+            self.combineVoxelGrids()
+
+        else:
+            self.voxelGrid = self.newVoxelGrid
+        
 
 
 
