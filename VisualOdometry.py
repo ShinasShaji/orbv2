@@ -218,11 +218,11 @@ class VisualOdometry(multiprocessing.Process):
         self.writeStateStacksToBuffers()
 
         # Initialize state estimates
-        self.R = self.rotationOffsetL.copy().T              # 3x3 matrix
-        self.T = np.array([self.positionOffsetL.copy()]).T  # 3x1 matrix
-        self.RT = np.hstack([self.R, self.T])               # 3x4 matrix
-        self.RT = np.vstack([self.RT, np.zeros([1, 4])])    # 4x4 matrix
-        self.RT[-1, -1] = 1
+        self.r = self.rotationOffsetL.copy().T              # 3x3 matrix
+        self.t = np.array([self.positionOffsetL.copy()]).T  # 3x1 matrix
+        self.rt = np.hstack([self.r, self.t])               # 3x4 matrix
+        self.rt = np.vstack([self.rt, np.zeros([1, 4])])    # 4x4 matrix
+        self.rt[-1, -1] = 1
 
 
     def writeStateStacksToBuffers(self):
@@ -303,12 +303,12 @@ class VisualOdometry(multiprocessing.Process):
 
         self.RTMatrixInverse = np.linalg.inv(self.RTMatrix)
         
-        self.RT = np.dot(self.RT, self.RTMatrixInverse)
+        self.rt = np.dot(self.rt, self.RTMatrixInverse)
 
         # Extracting rotation estimate from RT
-        rotationEstimate = self.RT[:3, :3]
+        rotationEstimate = self.rt[:3, :3]
         # Extracting position estimate from RT
-        positionEstimate = self.RT[:3, 3]
+        positionEstimate = self.rt[:3, 3]
         positionEstimate = np.hstack([positionEstimate*10, self.pickupTime])
         
         # Append estimates to deques

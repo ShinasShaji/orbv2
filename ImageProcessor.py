@@ -7,7 +7,6 @@ import numpy as np
 
 from helperScripts import jsonHelper
 from StereoMatcher import StereoMatcher
-from VoxelGrid import VoxelGrid
 
 
 class ImageProcessor(multiprocessing.Process):
