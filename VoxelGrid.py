@@ -36,7 +36,7 @@ class VoxelGrid:
         self.stereoMatcher = stereoMatcher
         
         # Debug
-        self.verbose = True
+        self.verbose = False
         if self.verbose:
             self.timeKeeper = TimeKeeper()
 
@@ -69,9 +69,9 @@ class VoxelGrid:
 
         # Creating wrapper arrays from memory buffers
         self.rotationWrapper = np.frombuffer(self.rotationBuffer, \
-                        dtype=np.float64).reshape((self.bufferLength, 3, 3))
+                dtype=np.float64).reshape((self.stateBufferLength, 3, 3))
         self.positionWrapper = np.frombuffer(self.positionBuffer, \
-                        dtype=np.float64).reshape((self.bufferLength, 4))
+                dtype=np.float64).reshape((self.stateBufferLength, 4))
 
         self.stateBufferReady = True
 
@@ -124,13 +124,14 @@ class VoxelGrid:
     def getStateFromBuffers(self):
         """Get camera state at pickupTime from Visual Odometry state buffers."""
         # Masking required estimate from buffer based on time
-        if self.stateEvent.wait():
-            mask = self.positionWrapper[:,3]==\
-                            self.stereoMatcher.imageProcessor.pickupTime
+        if self.stateEvent.wait():            
+            timeDiff = abs(self.positionWrapper[:,3] - \
+                self.stereoMatcher.imageProcessor.pickupTime)
+            index = np.argmin(timeDiff)
 
             # Extracting required state estimates with mask
-            self.rotationEstimate = self.rotationWrapper[mask][0]
-            self.positionEstimate = self.positionWrapper[mask][0][:-1]
+            self.rotationEstimate = self.rotationWrapper[index]
+            self.positionEstimate = self.positionWrapper[index][:-1]
 
 
     def generatePointCloud(self):
@@ -239,7 +240,7 @@ class VoxelGrid:
         self.newVoxelGrid = np.array(newVoxelGrid, dtype=np.int16)
 
         if self.verbose:
-            print("".join(["Voxels in grid: {}; ",\
+            print("".join(["Voxels in new grid: {}; ",\
                     "completed in {:.5f} sec; {} iterations"]).format(\
                     self.newVoxelGrid.shape[0], \
                     self.timeKeeper.returnPerfCounter(), \
@@ -303,6 +304,9 @@ class VoxelGrid:
                 self.cameraYawRange[n] += 2*np.pi
 
         self.cameraYawRange = np.sort(self.cameraYawRange)[::-1]
+        
+        if self.verbose:
+            print("Camera yaw: {:.5f}".format(self.cameraYaw*180/np.pi))
 
 
     def removeVoxelsInView(self):
@@ -323,10 +327,19 @@ class VoxelGrid:
             self.voxelGrid = \
                 nputils.in1d_dot_approach(self.voxelGrid, voxelsToRemove)
 
+        if self.verbose:
+            print("Voxels removed from base grid: {}".format(\
+                                            voxelsToRemove.shape[0]))
+
     
     def combineVoxelGrids(self):
         """Combine unique voxels from given base and new voxel grids"""
-        return np.unique(np.vstack([self.voxelGrid, self.newVoxelGrid]), axis=0)
+        self.voxelGrid = np.unique(\
+                np.vstack([self.voxelGrid, self.newVoxelGrid]), axis=0)
+
+        if self.verbose:
+            print("Voxels in combined grid: {}".format(\
+                                            self.voxelGrid.shape[0]))
 
 
     def displayGrid_Internal(self, grid):

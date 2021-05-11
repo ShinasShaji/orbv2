@@ -37,6 +37,8 @@ class ProcessManager():
         self.visualOdometry.setCameraMatrixL(\
             self.imageProcessor.getCameraMatrixL())
 
+        self.visualOdometry.createStateBuffers()
+
         self.imageProcessor.stereoMatcher.voxelGrid.referenceStateBuffers(\
             self.visualOdometry.getStateBuffers(), \
             self.visualOdometry.getBufferLength())
@@ -115,4 +117,4 @@ class ProcessManager():
 
 if __name__=="__main__":
     processManager = ProcessManager()
-    processManager.runProcesses("previewDisparity")
+    processManager.runProcesses("assistedVoxel")

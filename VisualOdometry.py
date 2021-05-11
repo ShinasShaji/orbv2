@@ -45,6 +45,8 @@ class VisualOdometry(multiprocessing.Process):
 
         # Debug
         self.verbose = True
+        if self.verbose:
+            np.set_printoptions(suppress=True)
 
 
         
@@ -229,9 +231,9 @@ class VisualOdometry(multiprocessing.Process):
         """Write contents of state stacks to the state buffers"""
         self.stateEvent.clear()
 
-        self.rotationBuffer[:len(self.rotationStack)] = \
+        self.rotationWrapper[:len(self.rotationStack)] = \
                                             self.rotationStack
-        self.positionBuffer[:len(self.positionStack)] = \
+        self.positionWrapper[:len(self.positionStack)] = \
                                             self.positionStack
 
         self.stateEvent.set()
@@ -258,6 +260,10 @@ class VisualOdometry(multiprocessing.Process):
         self.keypointStackL.append(keypoints)
         self.descriptorStackL.append(descriptors)
 
+        if self.verbose:
+            print("\nFeatures detected in current frame: {}"\
+                        .format(len(self.keypointStackL[-1])))
+
     
     def matchFeaturesORB(self, bestNMatches=150):
         """Match ORB features from stack"""
@@ -265,6 +271,10 @@ class VisualOdometry(multiprocessing.Process):
                                     self.descriptorStackL[1])
         matches = sorted(matches, key=lambda x:x.distance)
         self.matches = matches[:bestNMatches]
+
+        if self.verbose:
+            print("Features matched: {}"\
+                        .format(len(self.matches)))
     
     
     def estimateMotion(self):
@@ -297,29 +307,55 @@ class VisualOdometry(multiprocessing.Process):
 
     def updateStateEstimate(self):
         """Update state estimate with estimated motion"""
-        self.RTMatrix = np.hstack([self.rotationMatrix, self.translationVector])
+        self.RTMatrix = np.hstack([self.rotationMatrix, \
+                                            self.translationVector])
         self.RTMatrix = np.vstack([self.RTMatrix, np.zeros([1, 4])])
         self.RTMatrix[-1, -1] = 1
 
         self.RTMatrixInverse = np.linalg.inv(self.RTMatrix)
+
+        self.rtCopy = self.rt.copy()
         
         self.rt = np.dot(self.rt, self.RTMatrixInverse)
 
         # Extracting rotation estimate from RT
-        rotationEstimate = self.rt[:3, :3]
+        self.rotationEstimate = self.rt[:3, :3]
         # Extracting position estimate from RT
-        positionEstimate = self.rt[:3, 3]
-        positionEstimate = np.hstack([positionEstimate*10, self.pickupTime])
+        self.positionEstimate = self.rt[:3, 3]
+        self.positionEstimate = \
+                    np.hstack([self.positionEstimate*10, self.pickupTime])
+
+        # Setting back to previous estimates if variation is large
+        if self.checkEstimateVariation():
+            self.fallbackToPreviousEstimate()
         
         # Append estimates to deques
-        self.rotationStack.appendleft(rotationEstimate)
-        self.positionStack.appendleft(positionEstimate)
+        self.rotationStack.appendleft(self.rotationEstimate)
+        self.positionStack.appendleft(self.positionEstimate)
 
         if self.verbose:
-            print("\nUpdated rotation estimate: \n", rotationEstimate)
-            print("Updated position estimate: \n", positionEstimate)
+            print("Updated rotation estimate: \n", self.rotationEstimate)
+            print("Updated position estimate: \n", self.positionEstimate)
 
         self.writeStateStacksToBuffers()
+
+
+    def checkEstimateVariation(self):
+        """Check if estimate variation compared to previous exceeds 
+        threshold"""
+        positionCheck = np.any(abs(self.positionEstimate[:2] - \
+                                        self.positionStack[0][:2])>50)
+        rotationCheck = np.any(abs(self.rotationEstimate - \
+                                        self.rotationStack[0])>0.125)
+
+        return positionCheck or rotationCheck
+
+
+    def fallbackToPreviousEstimate(self):
+        """Replace latest state estimate with previous state estimate"""
+        self.positionEstimate[:2] = self.positionStack[0][:2]
+        self.rotationEstimate = self.rotationStack[0]
+        self.rt = self.rtCopy
 
 
     def estimateStateRunning(self):
@@ -328,6 +364,7 @@ class VisualOdometry(multiprocessing.Process):
             return
         
         self.createExtractorORB()
+        self.createMatcherBF()
         self.pollCapture()
         self.initializeState()
         self.extractFeaturesORB()
@@ -349,6 +386,8 @@ class VisualOdometry(multiprocessing.Process):
         
     def run(self):
         """Runs when start() is called on this process"""
+        self.pollCapture()
+
         self.estimateStateRunning()
 
 

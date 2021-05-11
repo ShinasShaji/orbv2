@@ -485,6 +485,8 @@ class ImageProcessor(multiprocessing.Process):
 
     def run(self):
         """Runs when start() is called on this process"""
+        self.pollCapture()
+        
         if self.context=="preview":
             self.previewCapture()
 
