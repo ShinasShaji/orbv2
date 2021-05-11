@@ -326,7 +326,7 @@ class VisualOdometry(multiprocessing.Process):
         # Setting back to previous estimates if variation is large
         if self.checkEstimateVariation():
             self.fallbackToPreviousEstimate()
-        
+
         # Append estimates to deques
         self.rotationStack.appendleft(self.rotationEstimate)
         self.positionStack.appendleft(self.positionEstimate)
