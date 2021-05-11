@@ -40,13 +40,11 @@ class VisualOdometry(multiprocessing.Process):
         # Events
         self.stateEvent = multiprocessing.Event()
 
-        # Performance metrics
-        self.timeKeeper = TimeKeeper()
-
         # Debug
-        self.verbose = True
+        self.verbose = False
         if self.verbose:
-            np.set_printoptions(suppress=True)
+            self.timeKeeper = TimeKeeper()
+            np.set_printoptions(suppress=True)    
 
 
         
@@ -344,9 +342,9 @@ class VisualOdometry(multiprocessing.Process):
         """Check if estimate variation compared to previous exceeds 
         threshold"""
         positionCheck = np.any(abs(self.positionEstimate[:2] - \
-                                        self.positionStack[0][:2])>50)
+                                        self.positionStack[0][:2])>100)
         rotationCheck = np.any(abs(self.rotationEstimate - \
-                                        self.rotationStack[0])>0.125)
+                                        self.rotationStack[0])>0.25)
 
         return positionCheck or rotationCheck
 

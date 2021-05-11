@@ -36,7 +36,7 @@ class VoxelGrid:
         self.stereoMatcher = stereoMatcher
         
         # Debug
-        self.verbose = False
+        self.verbose = True
         if self.verbose:
             self.timeKeeper = TimeKeeper()
 
@@ -130,7 +130,7 @@ class VoxelGrid:
             index = np.argmin(timeDiff)
 
             # Extracting required state estimates with mask
-            self.rotationEstimate = self.rotationWrapper[index]
+            self.rotationEstimate = self.rotationWrapper[index].T
             self.positionEstimate = self.positionWrapper[index][:-1]
 
 
@@ -150,7 +150,7 @@ class VoxelGrid:
                                                 .astype(np.int16)
 
         if self.verbose:
-            print("".join(["Points in unfiltered pointcloud: {}; ",\
+            print("".join(["\nPoints in unfiltered pointcloud: {}; ",\
                     "completed in {:.5f} sec"]).format(\
                     self.pointCloud.shape[0], \
                     self.timeKeeper.returnPerfCounter()))
@@ -307,6 +307,7 @@ class VoxelGrid:
         
         if self.verbose:
             print("Camera yaw: {:.5f}".format(self.cameraYaw*180/np.pi))
+            print("Camera yaw range:", self.cameraYawRange*180/np.pi)
 
 
     def removeVoxelsInView(self):
