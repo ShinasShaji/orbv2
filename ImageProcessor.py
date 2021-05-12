@@ -464,8 +464,8 @@ class ImageProcessor(multiprocessing.Process):
         cv2.destroyAllWindows()
 
 
-    def assistedVoxelGlobalMapping(self):
-        """Voxel global mapping routine assisted by visual odometry"""
+    def assistedVoxelMapping(self):
+        """Voxel mapping routine assisted by visual odometry"""
         if not self.stereoMatcher.voxelGrid.isVisualOdometryPipelineReady():
             return
 
@@ -473,7 +473,7 @@ class ImageProcessor(multiprocessing.Process):
             self.pollCapture()
 
             self.computeDisparity()
-            self.stereoMatcher.voxelGrid.assistedVoxelGlobalMapping()
+            self.stereoMatcher.voxelGrid.assistedVoxelMapping()
 
 
     ### Methods to set context and start processes
@@ -497,7 +497,7 @@ class ImageProcessor(multiprocessing.Process):
             self.previewUndistortCapture()
 
         elif self.context=="assistedVoxel":
-            self.assistedVoxelGlobalMapping()
+            self.assistedVoxelMapping()
 
 
 

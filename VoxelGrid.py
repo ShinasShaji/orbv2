@@ -384,8 +384,8 @@ class VoxelGrid:
         self.displayGrid(self.voxelGrid)
 
     
-    def assistedVoxelGlobalMapping(self):
-        """Voxel global mapping routine assisted by Visual Odometry"""
+    def assistedVoxelMapping(self):
+        """Voxel mapping routine assisted by Visual Odometry"""
         self.getStateFromBuffers()
 
         self.getNewVoxelGrid()
