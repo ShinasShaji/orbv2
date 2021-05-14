@@ -257,12 +257,12 @@ class ImageProcessor(multiprocessing.Process):
         # Left
         self.undistortImageL = cv2.remap(\
             imageL, self.undistortMapL[0], self.undistortMapL[1], \
-            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+            cv2.INTER_LINEAR, cv2.BORDER_CONSTANT, 0)
 
         # Right
         self.undistortImageR= cv2.remap(\
             imageR, self.undistortMapR[0], self.undistortMapR[1], \
-            cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+            cv2.INTER_LINEAR, cv2.BORDER_CONSTANT, 0)
 
     
     def convertToGrayscale(self, imageL, imageR):
