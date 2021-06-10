@@ -1,3 +1,4 @@
+import datetime
 import math
 
 import cv2
@@ -6,7 +7,6 @@ import numpy as np
 
 from helperScripts import jsonHelper
 from helperScripts.Keys import Keys
-from VoxelGrid import VoxelGrid
 
 
 class StereoMatcher:
@@ -28,9 +28,6 @@ class StereoMatcher:
         self.loadParameters()
         self.setBaseline(32)
         self.createMatcher()
-
-        # Initializing dependent objects
-        self.voxelGrid = VoxelGrid(stereoMatcher=self)
 
 
     def saveParameters(self, path="data/"):
@@ -252,13 +249,33 @@ class StereoMatcher:
         colors = colors.reshape(-1, 3)
         vertices = np.hstack([vertices, colors])
 
-        fileName = "".join(["pointCloud_", \
-                                self.imageProcessor.timeString, ".ply"])
+        timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
+        fileName = "".join(["pointCloud_", timeString, ".ply"])
 
         with open(fileName, 'wb') as plyFile:
             plyFile.write((plyHeader % dict(vert_num=len(vertices)))\
                                                         .encode('utf-8'))
             np.savetxt(plyFile, vertices, fmt='%f %f %f %d %d %d ')
+
+    
+    def referenceVoxelGrid(self, voxelGrid):
+        """Creates class references to passed VoxelGrid"""
+        self.voxelGrid = voxelGrid
+
+
+    def captureImages(self, path="captures/"):
+        """Call the image capture method of the referenced ImageProcessor"""
+        self.imageProcessor.captureImages(path=path)
+
+    
+    def viewVoxelGrid(self):
+        """Call the voxel grid viewer method of the referenced VoxelGrid"""
+        self.voxelGrid.viewVoxelGrid()
+
+    
+    def resetVoxelGrid(self):
+        """Call the voxel grid reset method of the referenced VoxelGrid"""
+        self.voxelGrid.resetVoxelGrid()
 
     
     def tuneParameters(self):
@@ -270,13 +287,13 @@ class StereoMatcher:
             return False
 
         elif key == Keys.p: # Generate point cloud on p
-            self.voxelGrid.viewVoxelGrid()
+            self.viewVoxelGrid()
 
         elif key == Keys.o: # Reset voxel grid on o
-            self.voxelGrid.resetVoxelGrid()
+            self.resetVoxelGrid()
 
         elif key == Keys.space: # Capture images on space
-            self.imageProcessor.captureImages()
+            self.captureImages()
             self.generateDepthMap()
             self.saveDepthMap()
 

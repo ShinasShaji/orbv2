@@ -1,16 +1,14 @@
 from ImageProcessor import ImageProcessor
 from StereoCapture import StereoCapture
-from VisualOdometry import VisualOdometry
 
 
 class ProcessManager():
     def __init__(self):
         self.stereoCapture = StereoCapture()
         self.imageProcessor = ImageProcessor()
-        self.visualOdometry = VisualOdometry()
 
         self.possibleContexts = ["preview", "previewDisparity", \
-            "previewUndistort", "assistedVoxel"]
+            "previewUndistort"]
 
 
     def prepareCapturePipeline(self):
@@ -22,30 +20,7 @@ class ProcessManager():
             self.stereoCapture.getCVImageShape())
 
         self.imageProcessor.referenceCaptureEvents(\
-            self.stereoCapture.getImageProcessorEvents())
-
-        
-    def prepareVisualOdometryPipeline(self):
-        """References bufers and events required for visual odometry"""
-        self.visualOdometry.referenceCaptureBuffers(\
-            self.stereoCapture.getBuffers(), \
-            self.stereoCapture.getCVImageShape())
-
-        self.visualOdometry.referenceCaptureEvents(\
-            self.stereoCapture.getVisualOdometryEvents())
-        
-        self.visualOdometry.setCameraMatrixL(\
-            self.imageProcessor.getCameraMatrixL())
-
-        self.visualOdometry.createStateBuffers()
-
-        self.imageProcessor.stereoMatcher.voxelGrid.referenceStateBuffers(\
-            self.visualOdometry.getStateBuffers(), \
-            self.visualOdometry.getBufferLength())
-
-        self.imageProcessor.stereoMatcher.voxelGrid.\
-            referenceStateEvent(\
-            self.visualOdometry.getStateEvent())
+            self.stereoCapture.getCaptureEvents())
 
 
     def runProcesses(self, context=None):
@@ -96,25 +71,8 @@ class ProcessManager():
             self.stereoCapture.join()
             self.imageProcessor.join()
 
-        elif self.context=="assistedVoxel":
-            """Voxel mapping assisted by Visual Odometry"""
-            # Prepare visual odometry pipeline
-            self.prepareVisualOdometryPipeline()
-
-            # Communicating context to objects
-            self.imageProcessor.setContext(self.context)
-
-            # Starting processes
-            self.stereoCapture.start()
-            self.imageProcessor.start()
-            self.visualOdometry.start()
-
-            self.stereoCapture.join()
-            self.imageProcessor.join()
-            self.visualOdometry.join()
-
 
 
 if __name__=="__main__":
     processManager = ProcessManager()
-    processManager.runProcesses("assistedVoxel")
+    processManager.runProcesses("previewDisparity")
