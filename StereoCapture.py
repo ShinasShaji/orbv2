@@ -42,13 +42,17 @@ class StereoCapture(multiprocessing.Process):
         self.frameTime = float(1/self.fps)
 
         # Events
-        self.imageEvent = multiprocessing.Event()
+        self.imageProcessorEvent = multiprocessing.Event()
+        self.visualOdometryEvent = multiprocessing.Event()
         self.quitEvent = multiprocessing.Event()
 
         # Flags
         self.bufferReady = False
         self.denoise = False
+
+        # Debug
         self.verbose = False
+
 
 
     def checkOpen(self):
@@ -82,7 +86,7 @@ class StereoCapture(multiprocessing.Process):
         self.captureTimeBuffer = multiprocessing.Array(ctypes.c_double, \
             1, lock=False)
 
-        # Creating arrays from memory buffers
+        # Creating arrays from shared memory buffers
         self.imageL = np.frombuffer(self.leftImageBuffer, \
                             dtype=np.uint8).reshape(self.cvImageShape)
         self.imageR = np.frombuffer(self.rightImageBuffer, \
@@ -105,6 +109,7 @@ class StereoCapture(multiprocessing.Process):
 
     
     def getCVImageShape(self):
+        """Returns shape of image for reshaping buffer"""
         if self.bufferReady:
             return self.cvImageShape
         
@@ -123,9 +128,14 @@ class StereoCapture(multiprocessing.Process):
             return None
 
     
-    def getCaptureEvents(self):
+    def getImageProcessorEvents(self):
         """Returns references of image, quit events"""
-        return (self.imageEvent, self.quitEvent)
+        return (self.imageProcessorEvent, self.quitEvent)
+
+    
+    def getVisualOdometryEvents(self):
+        """Returns references of image, quit events"""
+        return (self.visualOdometryEvent, self.quitEvent)
 
 
     def getFrames(self):
@@ -157,7 +167,10 @@ class StereoCapture(multiprocessing.Process):
             self.actualFrameTime = time.time() - self.previousTime
             self.remainingTime = self.frameTime - self.actualFrameTime
 
-            self.imageEvent.set()
+            # Set capture events to true
+            self.imageProcessorEvent.set()
+            self.visualOdometryEvent.set()
+            
             return True
 
         else:
