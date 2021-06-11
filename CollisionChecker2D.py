@@ -1,5 +1,19 @@
 import numpy as np
- 
+
+class Swathcomputation:
+    """Class for computing swath footprint"""
+    def __init__(self):
+        self.initialLocation = np.array([0, 0])
+
+    
+    def setdestination(self, destination):
+        """Setting the location of our robot"""
+        self.initialLocation[:2] = destination[:]
+
+    def translation(self):
+        self.initialLocation[:] = np.array([collisionChecker.robotFootprint[0]+self.initialLocation[0], collisionChecker.robotFootprint[1]+self.initialLocation[1]])    
+
+
 
 class CollisionChecker2D:
     """Class for 2D Collision Checking"""
@@ -28,6 +42,7 @@ if __name__=="__main__":
 
     collisionChecker = CollisionChecker2D()
     collisionChecker.setLocation([5, 5])
+    
 
     collision = collisionChecker.checkCollision(obstacleFootprint)
     if collision:
@@ -35,4 +50,7 @@ if __name__=="__main__":
 
     else:
         print("Avoided Collision")    
-        
+
+    swath = Swathcomputation()
+    swath.setdestination([10,10])   
+    swath.translation() 
