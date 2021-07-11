@@ -1,5 +1,6 @@
 """Module containing class Arduino to handle connections to Arduino COM and log data"""
 
+import os
 import time
 
 import serial
@@ -8,32 +9,20 @@ from serial.serialutil import SerialTimeoutException
 
 class Arduino:
     """Class to handle connections to Arduino COM and log data to defined csv files"""
-    # Keyboard controller
-    controller = None
-
-    # csv holders
-    velCsv = None
-    velVectorCsv = None
-    pitchCsv = None
-    rollCsv = None
-    posCsv = None
-    stateCsv = None
-
-    # csv writers
-    velWriter = None    
-    velVectorWriter = None
-    pitchWriter = None
-    rollWriter = None
-    posWriter = None
-    stateWriter = None
-
     # Connection
     arduino = None
     baudrate = 9600
-    ports = ['COM8', 'COM6']
     connected = None
     timeout = 2
     interval = 0.2    
+
+    # Use different port name list for connection based on platform
+    # Linux
+    if os.name == 'posix':
+        ports = ['/dev/ttyS0', '/dev/ttyS1']
+    # Windows
+    elif os.name == 'nt':
+        ports = ['COM8', 'COM6']
 
 
     def __init__(self):
