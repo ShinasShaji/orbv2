@@ -2,13 +2,14 @@
 
 import os
 import time
+import re
 
 import serial
 from serial.serialutil import SerialTimeoutException
 
 
 class Arduino:
-    """Class to handle connections to Arduino COM and log data to defined csv files"""
+    """Class to handle connections to Arduino COM"""
     # Connection
     arduino = None
     baudrate = 9600
@@ -52,7 +53,8 @@ class Arduino:
                 time.sleep(self.interval)
                 count += 1
                 if count * self.interval > self.timeout:
-                    raise SerialTimeoutException(''.join(['Could not connect on ', port, ' within timeout interval.']))
+                    raise SerialTimeoutException(''.join(['Could not connect on ', \
+                                                port, ' within timeout interval.']))
         except:
             print(''.join(['Could not connect on port ', port, '.']))
             self.connected = False
@@ -60,7 +62,8 @@ class Arduino:
 
 
     def attemptConnection(self):
-        """Attempt to connect on all specified ports, tries the next if one fails. Uses attemptPortConnection to do so, internally."""
+        """Attempt to connect on all specified ports, tries the next if one fails. 
+        Uses attemptPortConnection to do so, internally."""
         for port in self.ports:
             if (self.attemptPortConnection(port)):
                 time.sleep(1)
@@ -69,9 +72,24 @@ class Arduino:
         return False
      
 
+    def writeToSerial(self, content):
+        """Write the passed content to serial with start and end characters"""
+        self.arduino.write("".join(["<", content, ">"]).encode("utf_8"))
+
+    
+    def readFromSerial(self):
+        """Reads content from serial and removes start and end characters"""
+        content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))
+        
+        if content:
+            return content.group(1)
+        else:
+            return None
+
+
     def closeConnection(self):
-        """Close connections and files, and exit"""
-        print('Cleaning up and closing files...\n')
+        """Close connection and exit"""
+        print('Cleaning up and closing connection...\n')
         try:
             self.arduino.close()
             print ('Done!\n')
