@@ -72,23 +72,6 @@ class CollisionChecker2D:
 
 
 if __name__=="__main__":
-    #obstacleFootprint = np.array([10, 5, 12])
-
-    #collisionChecker = CollisionChecker2D()
-    #collisionChecker.setLocation([5, 5])
-    #
-
-    #collision = collisionChecker.checkCollision(obstacleFootprint)
-    #if collision:
-    #    print("Collided")
-
-    #else:
-    #    print("Avoided Collision")    
-
-    #swath = Swathcomputation()
-    #swath.setdestination([10,10])   
-    #swath.translation() 
-
     collisionChecker = CollisionChecker2D()
 
     path = np.linspace(0, 50, 6).reshape((-1, 1))
