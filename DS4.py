@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 
@@ -182,4 +183,8 @@ class DS4(Controller):
 
 
 if __name__ == "__main__":
-    ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+    if os.name == "posix":
+        ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+
+    else:
+        print("The script does not support this platform")
