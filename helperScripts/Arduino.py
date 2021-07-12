@@ -79,12 +79,16 @@ class Arduino:
     
     def readFromSerial(self):
         """Reads content from serial and removes start and end characters"""
-        content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))
-        
-        if content:
-            return content.group(1)
-        else:
-            return None
+        if self.arduino.in_waiting:
+            try:
+                content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))
+            except UnicodeDecodeError:
+                content = []
+                
+            if content:
+                return content.group(1)
+            else:
+                return None
 
 
     def closeConnection(self):
