@@ -74,18 +74,29 @@ class Arduino:
 
     def writeToSerial(self, content):
         """Write the passed content to serial with start and end characters"""
-        self.arduino.write("".join(["<", content, ">"]).encode("utf_8"))
+        try:
+            self.arduino.write("".join(["<", content, ">"]).encode("utf_8"))
+
+            if self.verbose:
+                print("Serial write:", content)
+                
+        except:
+            print("Could not send message through serial")
 
     
     def readFromSerial(self):
         """Reads content from serial and removes start and end characters"""
         if self.arduino.in_waiting:
             try:
-                content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))
+                content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))                
+
             except UnicodeDecodeError:
                 content = []
-                
+
             if content:
+                if self.verbose:
+                    print("Serial read:", content.group(1))
+
                 return content.group(1)
             else:
                 return None
@@ -96,6 +107,7 @@ class Arduino:
         print('Cleaning up and closing connection...\n')
         try:
             self.arduino.close()
+            self.connected = False
             print ('Done!\n')
         except Exception as e:
             print (e)

@@ -35,6 +35,8 @@ class DS4(Controller):
             # Connect to Arduino
             self.arduino = Arduino()
             self.arduino.attemptConnection()
+            self.prevTxTime = self.currentTime
+            self.txInterval = 0.1
 
             # Create thread to periodically write state to serial
             self.serialWriteThread = threading.Thread(target=self.writeStateToSerial)
@@ -178,8 +180,28 @@ class DS4(Controller):
 
 
     def writeStateToSerial(self):
-        pass
+        """Write current state of controller inputs to serial"""
+        try:
+            while self.arduino.connected:
+                currentTime = time.perf_counter()
+                timeElapsed = currentTime - self.prevTxTime
+
+                if timeElapsed > self.txInterval:
+                    content = "{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
+                            self.L3State[0],        self.L3State[1], \
+                            self.R3State[0],        self.R3State[1], \
+                            self.triggerState[0],   self.triggerState[1])
+                
+                    self.arduino.writeToSerial(content)
+                    self.prevTxTime = currentTime
+                
+                else:
+                    time.sleep(self.txInterval - timeElapsed)
+
+        except KeyboardInterrupt:
+            self.arduino.closeConnection()
+
 
 
 if __name__ == "__main__":
-    ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+    ds4 = DS4(serialOutput = False, interface="/dev/input/js0", connecting_using_ds4drv=False)
