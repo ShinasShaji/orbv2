@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 
@@ -187,7 +188,7 @@ class DS4(Controller):
                 timeElapsed = currentTime - self.prevTxTime
 
                 if timeElapsed > self.txInterval:
-                    content = "{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
+                    content = "ds4 {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
                             self.L3State[0],        self.L3State[1], \
                             self.R3State[0],        self.R3State[1], \
                             self.triggerState[0],   self.triggerState[1])
@@ -204,4 +205,8 @@ class DS4(Controller):
 
 
 if __name__ == "__main__":
-    ds4 = DS4(serialOutput = False, interface="/dev/input/js0", connecting_using_ds4drv=False)
+    if os.name == "posix":
+        ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+
+    else:
+        print("The script does not support this platform")
