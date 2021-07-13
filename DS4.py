@@ -19,7 +19,7 @@ class DS4(Controller):
         self.verbose = True
 
         # State array; L3(x2), R3(x2), L2, R2
-        self.state = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0]
         
         self.serialOutput = serialOutput
         if self.serialOutput:
@@ -39,52 +39,52 @@ class DS4(Controller):
 
     # L3
     def on_L3_left(self, value):
-        self.updateState("L3", direction="left", value=value)
+        self.updateState("L3", direction="left", value=value+self.MAXVALUE)
 
 
     def on_L3_right(self, value):
-        self.updateState("L3", direction="right", value=value)
+        self.updateState("L3", direction="right", value=value+self.MAXVALUE)
 
     
     def on_L3_x_at_rest(self):
-        self.updateState("L3", direction="left", value=0)
+        self.updateState("L3", direction="left", value=self.MAXVALUE)
         
     
     def on_L3_up(self, value):
-        self.updateState("L3", direction="up", value=value)
+        self.updateState("L3", direction="up", value=value+self.MAXVALUE)
 
     
     def on_L3_down(self, value):
-        self.updateState("L3", direction="down", value=value)
+        self.updateState("L3", direction="down", value=value+self.MAXVALUE)
 
 
     def on_L3_y_at_rest(self):
-        self.updateState("L3", direction="up", value=0)
+        self.updateState("L3", direction="up", value=self.MAXVALUE)
 
 
     # R3
     def on_R3_left(self, value):
-        self.updateState("R3", direction="left", value=value)
+        self.updateState("R3", direction="left", value=value+self.MAXVALUE)
 
 
     def on_R3_right(self, value):
-        self.updateState("R3", direction="right", value=value)
+        self.updateState("R3", direction="right", value=value+self.MAXVALUE)
 
     
     def on_R3_x_at_rest(self):
-        self.updateState("R3", direction="left", value=0)
+        self.updateState("R3", direction="left", value=self.MAXVALUE)
         
     
     def on_R3_up(self, value):
-        self.updateState("R3", direction="up", value=value)
+        self.updateState("R3", direction="up", value=value+self.MAXVALUE)
 
     
     def on_R3_down(self, value):
-        self.updateState("R3", direction="down", value=value)
+        self.updateState("R3", direction="down", value=value+self.MAXVALUE)
 
 
     def on_R3_y_at_rest(self):
-        self.updateState("R3", direction="up", value=0)
+        self.updateState("R3", direction="up", value=self.MAXVALUE)
 
 
     # Triggers, L2 and R2
@@ -107,6 +107,8 @@ class DS4(Controller):
     # State management
     def updateState(self, control, direction=None, value=None):
         """Update state with current values"""
+        value = value * 10
+
         if control == "L3":
             if direction in ["up", "down"]:
                 self.state[1] = value/self.MAXVALUE
@@ -146,14 +148,14 @@ class DS4(Controller):
             
 
     def writeStateToSerial(self):
-        """Write current state of controller inputs to serial"""
+        """Write current controller state to serial. Run as thread"""
         try:
             while self.arduino.connected:
                 self.currentTime = time.perf_counter()
                 timeElapsed = self.currentTime - self.prevTxTime
 
                 if timeElapsed > self.txInterval:
-                    content = "ds4 {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
+                    content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
                             self.state[0], self.state[1], \
                             self.state[2], self.state[3], \
                             self.state[4], self.state[5])
@@ -175,4 +177,4 @@ if __name__ == "__main__":
         ds4 = DS4(serialOutput=True, interface="/dev/input/js0", connecting_using_ds4drv=False)
 
     else:
-        print("The script does not support this platform")
+        print("This platform is unsupported")
