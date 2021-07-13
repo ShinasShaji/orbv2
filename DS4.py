@@ -12,21 +12,15 @@ class DS4(Controller):
         Controller.__init__(self, **kwargs)
         self.INTERVAL = 0.01
         self.MAXVALUE = 32767
-        self.INITSTATE = [0.0, 0.0]
         
         self.currentTime = time.perf_counter()
 
-        self.verbose = False
+        # Print control state on change
+        self.verbose = True
 
-        # L3
-        self.L3State = self.INITSTATE.copy()
-
-        # R3
-        self.R3State = self.INITSTATE.copy()
-
-        # Triggers, L2 and R2
-        self.triggerState = self.INITSTATE.copy()
-
+        # State array; L3(x2), R3(x2), L2, R2
+        self.state = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        
         self.serialOutput = serialOutput
         if self.serialOutput:
             # Connect to Arduino
@@ -115,39 +109,40 @@ class DS4(Controller):
         """Update state with current values"""
         if control == "L3":
             if direction in ["up", "down"]:
-                self.L3State[1] = value/self.MAXVALUE
+                self.state[1] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
-                self.L3State[0] = value/self.MAXVALUE
+                self.state[0] = value/self.MAXVALUE
 
             self.printState("L3")
 
         elif control == "R3":
             if direction in ["up", "down"]:
-                self.R3State[1] = value/self.MAXVALUE
+                self.state[3] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
-                self.R3State[0] = value/self.MAXVALUE
+                self.state[2] = value/self.MAXVALUE
 
             self.printState("R3")
 
         elif control in ["L2", "R2"]:
             if control == "L2":
-                self.triggerState[0] = value/(2*self.MAXVALUE)
+                self.state[4] = value/(2*self.MAXVALUE)
             elif control == "R2":
-                self.triggerState[1] = value/(2*self.MAXVALUE)
+                self.state[5] = value/(2*self.MAXVALUE)
 
             self.printState("Trigger")
 
 
     def printState(self, control):
-        """Print controller state"""        
-        if control == "L3":
-            print("L3", self.L3State)
+        """Print controller state"""  
+        if self.verbose: 
+            if control == "L3":
+                print("L3", self.state[:2])
             
-        elif control == "R3":
-            print("R3", self.R3State)
+            elif control == "R3":
+                print("R3", self.state[2:4])
             
-        elif control == "Trigger":
-            print("Trigger", self.triggerState)
+            elif control == "Trigger":
+                print("Trigger", self.state[4:])
             
 
     def writeStateToSerial(self):
@@ -159,13 +154,11 @@ class DS4(Controller):
 
                 if timeElapsed > self.txInterval:
                     content = "ds4 {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
-                            self.L3State[0],        self.L3State[1], \
-                            self.R3State[0],        self.R3State[1], \
-                            self.triggerState[0],   self.triggerState[1])
+                            self.state[0], self.state[1], \
+                            self.state[2], self.state[3], \
+                            self.state[4], self.state[5])
 
                     self.arduino.writeToSerial(content)
-
-                    self.arduino.readFromSerial()
 
                     self.prevTxTime = self.currentTime
                 
