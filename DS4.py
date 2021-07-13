@@ -16,20 +16,16 @@ class DS4(Controller):
         
         self.currentTime = time.perf_counter()
 
+        self.verbose = False
+
         # L3
-        self.L3State = self.INITSTATE
-        self.prevL3Time = self.currentTime
-        self.L3Override = False
+        self.L3State = self.INITSTATE.copy()
 
         # R3
-        self.R3State = self.INITSTATE
-        self.prevR3Time = self.currentTime
-        self.R3Override = False
+        self.R3State = self.INITSTATE.copy()
 
         # Triggers, L2 and R2
-        self.triggerState = self.INITSTATE
-        self.prevTriggerTime = self.currentTime
-        self.triggerOverride = False
+        self.triggerState = self.INITSTATE.copy()
 
         self.serialOutput = serialOutput
         if self.serialOutput:
@@ -58,7 +54,6 @@ class DS4(Controller):
     
     def on_L3_x_at_rest(self):
         self.updateState("L3", direction="left", value=0)
-        self.L3Override = True
         
     
     def on_L3_up(self, value):
@@ -71,7 +66,6 @@ class DS4(Controller):
 
     def on_L3_y_at_rest(self):
         self.updateState("L3", direction="up", value=0)
-        self.R3Override = True
 
 
     # R3
@@ -85,7 +79,6 @@ class DS4(Controller):
     
     def on_R3_x_at_rest(self):
         self.updateState("R3", direction="left", value=0)
-        self.L3Override = True
         
     
     def on_R3_up(self, value):
@@ -98,7 +91,6 @@ class DS4(Controller):
 
     def on_R3_y_at_rest(self):
         self.updateState("R3", direction="up", value=0)
-        self.R3Override = True
 
 
     # Triggers, L2 and R2
@@ -108,7 +100,6 @@ class DS4(Controller):
     
     def on_L2_release(self):
         self.updateState("L2", value=0)
-        self.triggerOverride = True
 
     
     def on_R2_press(self, value):
@@ -117,7 +108,6 @@ class DS4(Controller):
     
     def on_R2_release(self):
         self.updateState("R2", value=0)
-        self.triggerOverride = True
 
 
     # State management
@@ -128,9 +118,6 @@ class DS4(Controller):
                 self.L3State[1] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
                 self.L3State[0] = value/self.MAXVALUE
-            
-            if self.L3State == self.INITSTATE:
-                self.L3Override = True
 
             self.printState("L3")
 
@@ -139,9 +126,6 @@ class DS4(Controller):
                 self.R3State[1] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
                 self.R3State[0] = value/self.MAXVALUE
-            
-            if self.R3State == self.INITSTATE:
-                self.R3Override = True
 
             self.printState("R3")
 
@@ -150,51 +134,40 @@ class DS4(Controller):
                 self.triggerState[0] = value/(2*self.MAXVALUE)
             elif control == "R2":
                 self.triggerState[1] = value/(2*self.MAXVALUE)
-            
-            if self.triggerState == self.INITSTATE:
-                self.triggerOverride = True
 
             self.printState("Trigger")
 
 
     def printState(self, control):
-        """Print controller state at defined intervals"""
-        self.currentTime = time.perf_counter()
-        
-        if control == "L3" and (self.currentTime-self.prevL3Time > self.INTERVAL or self.L3Override):
+        """Print controller state"""        
+        if control == "L3":
             print("L3", self.L3State)
             
-            self.prevL3Time = self.currentTime
-            self.L3Override = False
-
-        elif control == "R3" and (self.currentTime-self.prevR3Time > self.INTERVAL or self.R3Override):
+        elif control == "R3":
             print("R3", self.R3State)
             
-            self.prevR3Time = self.currentTime
-            self.R3Override = False
-
-        elif control == "Trigger" and (self.currentTime-self.prevR3Time > self.INTERVAL or self.R3Override):
+        elif control == "Trigger":
             print("Trigger", self.triggerState)
             
-            self.prevTriggerTime = self.currentTime
-            self.triggerOverride = False
-
 
     def writeStateToSerial(self):
         """Write current state of controller inputs to serial"""
         try:
             while self.arduino.connected:
-                currentTime = time.perf_counter()
-                timeElapsed = currentTime - self.prevTxTime
+                self.currentTime = time.perf_counter()
+                timeElapsed = self.currentTime - self.prevTxTime
 
                 if timeElapsed > self.txInterval:
                     content = "ds4 {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}".format(\
                             self.L3State[0],        self.L3State[1], \
                             self.R3State[0],        self.R3State[1], \
                             self.triggerState[0],   self.triggerState[1])
-                
+
                     self.arduino.writeToSerial(content)
-                    self.prevTxTime = currentTime
+
+                    self.arduino.readFromSerial()
+
+                    self.prevTxTime = self.currentTime
                 
                 else:
                     time.sleep(self.txInterval - timeElapsed)
@@ -206,7 +179,7 @@ class DS4(Controller):
 
 if __name__ == "__main__":
     if os.name == "posix":
-        ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+        ds4 = DS4(serialOutput=True, interface="/dev/input/js0", connecting_using_ds4drv=False)
 
     else:
         print("The script does not support this platform")
