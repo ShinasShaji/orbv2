@@ -18,12 +18,14 @@ boolean newData = false;
 
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {3, 5, 6};
-int servoStates[SERVOS] = {90, 90, 90};
+float servoStates[SERVOS] = {90, 90, 90};
+int maxServoStates[SERVOS] = {180, 120, 150};
+int minServoStates[SERVOS] = {0, 0, 15};
 
 // Max swing rate in degrees per second
-int maxSwingRate = 5;
+float maxSwingRate = 90;
 // Refresh time in milliseconds
-unsigned int servoRefresh = 100;
+unsigned int servoRefresh = 10;
 
 unsigned long prevServo = millis();
 
@@ -50,16 +52,20 @@ void setup(){
   Serial.println("<ping>");
   
   // Setting up servos
+  maxSwingRate = maxSwingRate * servoRefresh / 1000;
+  initializeServoPosition();
+  
   for (int i = 0; i < SERVOS; i ++){
     
     // Attach pins to the corresponding servo
+    joints[i].write(minServoStates[i]);
     joints[i].attach(servoPins[i]);
   
     // Delay before continuing
     delay(500);
-    
-    currentTime = millis();
   }
+    
+  currentTime = millis();
 }
 
 
@@ -73,6 +79,7 @@ void loop(){
   if (newData){
     newData = false;
     extractControllerState();
+    writeServoStateSerial();
   }  
   
   if ((currentTime-prevServo)>=servoRefresh){
@@ -145,9 +152,36 @@ void updateServoStates(){
 }
 
 
+// Function to copy minServoStates to servoStates
+void initializeServoPosition(){
+  for (int i = 0; i < SERVOS; i ++){
+    servoStates[i] = minServoStates[i];
+  }
+}
+
+
 // Function to write servoState to all servos
 void writeStatesToServos(){
   for (int k = 0; k < SERVOS; k ++){
+    // Clamp servoStates within limits
+    if (servoStates[k] > maxServoStates[k]){
+      servoStates[k] = maxServoStates[k];
+    }
+    else if (servoStates[k] < minServoStates[k]){
+      servoStates[k] = minServoStates[k];
+    }
+    // Write state to servo
     joints[k].write(servoStates[k]);
   }
+}
+
+
+// Function to write servoStates to serial
+void writeServoStateSerial(){
+  Serial.print("<s");
+  for (int i = 0; i < SERVOS; i ++){
+    Serial.print(" ");
+    Serial.print(int(servoStates[i]));
+  }
+  Serial.println(">");
 }

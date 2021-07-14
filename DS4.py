@@ -2,39 +2,28 @@ import os
 import threading
 import time
 
+import numpy as np
 from pyPS4Controller.controller import Controller
 
 from helperScripts.Arduino import Arduino
+from helperScripts import jsonHelper
 
 
 class DS4(Controller):
-    def __init__(self, serialOutput = False, **kwargs):
+    def __init__(self, **kwargs):
         Controller.__init__(self, **kwargs)
         self.INTERVAL = 0.01
         self.MAXVALUE = 32767
         
         self.currentTime = time.perf_counter()
+        self.exitFlag = False
 
         # Print control state on change
         self.verbose = True
 
         # State array; L3(x2), R3(x2), L2, R2
         self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0]
-        
-        self.serialOutput = serialOutput
-        if self.serialOutput:
-            # Connect to Arduino
-            self.arduino = Arduino()
-            self.arduino.attemptConnection()
-            self.prevTxTime = self.currentTime
-            self.txInterval = 0.1
 
-            # Create thread to periodically write state to serial
-            self.serialWriteThread = threading.Thread(target=self.writeStateToSerial)
-            self.serialWriteThread.start()
-
-        # Starting listener
-        self.listen()
 
 
     # L3
@@ -103,6 +92,30 @@ class DS4(Controller):
     def on_R2_release(self):
         self.updateState("R2", value=0)
 
+    
+    def on_x_press(self):
+        """Save minimum servo states to json"""
+        self.servoLimits["min"] = self.servoState.tolist()
+        print("Min: ", self.servoState)
+
+        jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
+
+
+    def on_triangle_press(self):
+        """Save maximum servo states to json"""
+        self.servoLimits["max"] = self.servoState.tolist()
+        print("Max: ", self.servoState)
+
+        jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
+
+
+    def on_options_press(self):
+        """Exit on options press"""
+        self.exitFlag = True
+
+        time.sleep(0.1)
+        exit()
+
 
     # State management
     def updateState(self, control, direction=None, value=None):
@@ -145,36 +158,76 @@ class DS4(Controller):
             
             elif control == "Trigger":
                 print("Trigger", self.state[4:])
+
+
+    def extractServoState(self, message):
+        """Extracts servo states from received serial message"""
+        message = str(message).split()
+
+        if message[0] == "s" and len(message) == 4:
+            self.servoState = np.array([message[1], message[2], message[3]], \
+                                        dtype=np.int16)
             
 
-    def writeStateToSerial(self):
-        """Write current controller state to serial. Run as thread"""
-        try:
-            while self.arduino.connected:
-                self.currentTime = time.perf_counter()
-                timeElapsed = self.currentTime - self.prevTxTime
+    def serialServoCalibrate(self):
+        """Writes current controller state to serial for servo calibration. Run as thread"""
+        while self.arduino.connected and not self.exitFlag:
+            self.currentTime = time.perf_counter()
+            timeElapsed = self.currentTime - self.prevTxTime
 
-                if timeElapsed > self.txInterval:
-                    content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
-                            self.state[0], self.state[1], \
-                            self.state[2], self.state[3], \
-                            self.state[4], self.state[5])
+            if timeElapsed > self.txInterval:
+                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
+                        self.state[0], self.state[1], \
+                        self.state[2], self.state[3], \
+                        self.state[4], self.state[5])
 
-                    self.arduino.writeToSerial(content)
+                self.arduino.writeToSerial(content)
 
-                    self.prevTxTime = self.currentTime
+                self.extractServoState(self.arduino.readFromSerial())
+
+                self.prevTxTime = self.currentTime
                 
-                else:
-                    time.sleep(self.txInterval - timeElapsed)
+            else:
+                time.sleep(self.txInterval - timeElapsed)
 
-        except KeyboardInterrupt:
-            self.arduino.closeConnection()
+        self.arduino.closeConnection()
 
+
+    def setContext(self, context):
+        """Selects which methods to run on run() based on context"""
+        self.context = context
+
+    
+    def run(self):
+        """Run methods based on set context. Not a thread/process; call run()"""
+        if self.context == "preview":
+            self.verbose = True
+            self.listen()
+    
+        elif self.context == "servoCalibrate":
+            # Connect to Arduino
+            self.arduino = Arduino()
+            self.arduino.attemptConnection()
+            self.prevTxTime = self.currentTime
+            self.txInterval = 0.1
+
+            self.servoState = None
+            self.servoLimits = {"max":None, "min":None}
+            self.servoCalibrationPath = "data/servoCalibration.json"
+
+            # Create thread to periodically write state to serial
+            self.servoCalibrateThread = threading.Thread(target=self.serialServoCalibrate)
+            self.servoCalibrateThread.start()
+
+            self.listen()
+                
 
 
 if __name__ == "__main__":
     if os.name == "posix":
-        ds4 = DS4(serialOutput=True, interface="/dev/input/js0", connecting_using_ds4drv=False)
+        ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
+        ds4.setContext("servoCalibrate")
+        ds4.run()
 
     else:
         print("This platform is unsupported")

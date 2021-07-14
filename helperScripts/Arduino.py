@@ -99,7 +99,7 @@ class Arduino:
                 content = re.search("<.*?>", self.arduino.readline().decode("utf-8"))
                 content = content.group()[1:-1]
 
-            except UnicodeDecodeError:
+            except:
                 content = 0
 
             if content:
