@@ -14,13 +14,18 @@ boolean newData = false;
 // Servo variables
 // Initially set to mid position
 // Expands array as required
-#define SERVOS 3
+#define LEGS 1
+#define SERVOS 6
 
 Servo joints[SERVOS];
-int servoPins[SERVOS] = {5, 3, 6};
-float servoStates[SERVOS] = {90, 90, 90};
-int maxServoStates[SERVOS] = {180, 90, 150};
-int minServoStates[SERVOS] = {0, 0, 15};
+int servoPins[SERVOS] = {5, 3,  6,
+                         9, 10, 11};
+float servoStates[SERVOS] = {90, 90, 90,
+                             90, 90, 90};
+int maxServoStates[SERVOS] = {180, 0,   150,
+                              130, 130, 130};
+int minServoStates[SERVOS] = {0,  90, 15,
+                              40, 40, 40};
 
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
@@ -32,11 +37,13 @@ unsigned long prevServo = millis();
 
 // Controller state
 // Number of independent state variables
-#define STATES 6
+#define STATES 7
 #define MIDSTATE 10
 
-// L3x2, R3x2, L2, R2
-int controller[STATES] = {10, 10, 10, 10, 0, 0};
+// L3x2, R3x2, L2, R2, Square
+int controller[STATES] = {10, 10, 10, 10, 0, 0, 0};
+int currentLeg = 0;
+int legServoIndexOffset = 3*currentLeg;
 
 unsigned long prevController = millis();
 
@@ -74,11 +81,12 @@ void loop(){
   currentTime = millis();
   
   // Recieve data from serial
-  recvMarked();
+  recieveSerialData();
 
   if (newData){
     newData = false;
     extractControllerState();
+    checkLegChange();
     writeServoStateSerial();
   }  
   
@@ -91,7 +99,7 @@ void loop(){
 
 
 // Function to remove start and stop characters from serial message
-void recvMarked(){
+void recieveSerialData(){
   static boolean recvInProgress = false;
   static byte ndx = 0;
   static char startMarker = '<';
@@ -144,9 +152,19 @@ void extractControllerState(){
 
 // Function to update servo states
 void updateServoStates(){
-  servoStates[0] = servoStates[0] + (maxSwingRate*(controller[0]-MIDSTATE)/MIDSTATE);
-  servoStates[1] = servoStates[1] + (maxSwingRate*(controller[2]-MIDSTATE)/MIDSTATE);
-  servoStates[2] = servoStates[2] + (maxSwingRate*(controller[5]-controller[4])/MIDSTATE);
+  legServoIndexOffset = 3*currentLeg;
+  
+  servoStates[legServoIndexOffset+0] = servoStates[legServoIndexOffset+0] + (maxSwingRate*(controller[0] - MIDSTATE) / MIDSTATE) * 
+                                        ((maxServoStates[legServoIndexOffset+0] - minServoStates[legServoIndexOffset+0]) / 
+                                        abs(maxServoStates[legServoIndexOffset+0] - minServoStates[legServoIndexOffset+0]));
+                                        
+  servoStates[legServoIndexOffset+1] = servoStates[legServoIndexOffset+1] + (maxSwingRate*(controller[2] - MIDSTATE) / MIDSTATE) * 
+                                        ((maxServoStates[legServoIndexOffset+1] - minServoStates[legServoIndexOffset+1]) / 
+                                        abs(maxServoStates[legServoIndexOffset+1] - minServoStates[legServoIndexOffset+1]));
+                                        
+  servoStates[legServoIndexOffset+2] = servoStates[legServoIndexOffset+2] + (maxSwingRate*(controller[5] - controller[4]) / MIDSTATE) * 
+                                        ((maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]) / 
+                                        abs(maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]));
   
   prevServo = currentTime;
 }
@@ -184,4 +202,23 @@ void writeServoStateSerial(){
     Serial.print(int(servoStates[i]));
   }
   Serial.println(">");
+}
+
+
+// Function to check for leg change
+void checkLegChange(){
+  static boolean legChange = false;
+  
+  if ((controller[6]==1)&&(legChange==false)){
+    legChange = true;
+    currentLeg = currentLeg + 1;
+    
+    if (currentLeg > LEGS) {
+      currentLeg = 0;
+    }
+  }
+  
+  else if ((controller[6]==0)&&(legChange==true)){
+    legChange = false;
+  }
 }

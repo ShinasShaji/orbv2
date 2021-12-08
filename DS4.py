@@ -21,8 +21,8 @@ class DS4(Controller):
         # Print control state on change
         self.verbose = True
 
-        # State array; L3(x2), R3(x2), L2, R2
-        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0]
+        # State array; L3(x2), R3(x2), L2, R2, Square
+        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0]
 
 
 
@@ -93,6 +93,14 @@ class DS4(Controller):
         self.updateState("R2", value=0)
 
     
+    def on_square_press(self):
+        self.updateState("Square", value = 1)
+
+
+    def on_square_release(self):
+        self.updateState("Square", value = 0)
+
+    
     def on_x_press(self):
         """Save minimum servo states to json"""
         self.servoLimits["min"] = self.servoState.tolist()
@@ -120,9 +128,9 @@ class DS4(Controller):
     # State management
     def updateState(self, control, direction=None, value=None):
         """Update state with current values"""
-        value = value * 10
-
         if control == "L3":
+            value = value * 10
+
             if direction in ["up", "down"]:
                 self.state[1] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
@@ -131,6 +139,8 @@ class DS4(Controller):
             self.printState("L3")
 
         elif control == "R3":
+            value = value * 10
+
             if direction in ["up", "down"]:
                 self.state[3] = value/self.MAXVALUE
             elif direction in ["left", "right"]:
@@ -139,12 +149,19 @@ class DS4(Controller):
             self.printState("R3")
 
         elif control in ["L2", "R2"]:
+            value = value * 10
+
             if control == "L2":
                 self.state[4] = value/(2*self.MAXVALUE)
             elif control == "R2":
                 self.state[5] = value/(2*self.MAXVALUE)
 
             self.printState("Trigger")
+
+        elif control == "Square":
+            self.state[6] = value
+
+            self.printState("Square")
 
 
     def printState(self, control):
@@ -157,7 +174,10 @@ class DS4(Controller):
                 print("R3", self.state[2:4])
             
             elif control == "Trigger":
-                print("Trigger", self.state[4:])
+                print("Trigger", self.state[4:6])
+
+            elif control == "Square":
+                print("Square", self.state[6])
 
 
     def extractServoState(self, message):
@@ -176,10 +196,11 @@ class DS4(Controller):
             timeElapsed = self.currentTime - self.prevTxTime
 
             if timeElapsed > self.txInterval:
-                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
+                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
                         self.state[0], self.state[1], \
                         self.state[2], self.state[3], \
-                        self.state[4], self.state[5])
+                        self.state[4], self.state[5], \
+                        self.state[6])
 
                 self.arduino.writeToSerial(content)
 
