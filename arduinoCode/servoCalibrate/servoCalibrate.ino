@@ -197,7 +197,7 @@ void writeStatesToServos(){
 // Function to write servoStates to serial
 void writeServoStateSerial(){
   Serial.print("<s");
-  for (int i = 0; i < SERVOS; i ++){
+  for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
     Serial.print(" ");
     Serial.print(int(servoStates[i]));
   }
