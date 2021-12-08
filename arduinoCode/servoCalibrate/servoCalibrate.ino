@@ -17,9 +17,9 @@ boolean newData = false;
 #define SERVOS 3
 
 Servo joints[SERVOS];
-int servoPins[SERVOS] = {3, 5, 6};
+int servoPins[SERVOS] = {5, 3, 6};
 float servoStates[SERVOS] = {90, 90, 90};
-int maxServoStates[SERVOS] = {180, 120, 150};
+int maxServoStates[SERVOS] = {180, 90, 150};
 int minServoStates[SERVOS] = {0, 0, 15};
 
 // Max swing rate in degrees per second
