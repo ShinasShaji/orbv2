@@ -103,7 +103,7 @@ class DS4(Controller):
     
     def on_x_press(self):
         """Save minimum servo states to json"""
-        self.servoLimits["min"] = self.servoState.tolist()
+        self.servoLimits[str(self.servoState[1])]["min"] = self.servoState.tolist()
         print("Min: ", self.servoState)
 
         jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
@@ -111,7 +111,7 @@ class DS4(Controller):
 
     def on_triangle_press(self):
         """Save maximum servo states to json"""
-        self.servoLimits["max"] = self.servoState.tolist()
+        self.servoLimits[str(self.servoState[1])]["max"] = self.servoState.tolist()
         print("Max: ", self.servoState)
 
         jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
@@ -184,8 +184,9 @@ class DS4(Controller):
         """Extracts servo states from received serial message"""
         message = str(message).split()
 
-        if message[0] == "s" and len(message) == 4:
-            self.servoState = np.array([message[1], message[2], message[3]], \
+        if message[0] == "s" and len(message) == 5:
+            self.servoState = np.array([message[1], message[2], \
+                                        message[3], message[4]], \
                                         dtype=np.int16)
             
 
@@ -233,7 +234,7 @@ class DS4(Controller):
             self.txInterval = 0.1
 
             self.servoState = None
-            self.servoLimits = {"max":None, "min":None}
+            self.servoLimits = {"0": {"max":None, "min":None}}
             self.servoCalibrationPath = "data/servoCalibration.json"
 
             # Create thread to periodically write state to serial

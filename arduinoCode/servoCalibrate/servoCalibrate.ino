@@ -6,7 +6,7 @@ Code to calibrate servos using a ds4 controller
 
 
 // Serial recieve variables
-const byte numChars = 32;
+const byte numChars = 48;
 char receivedChars[numChars];
 boolean newData = false;
 
@@ -159,8 +159,8 @@ void updateServoStates(){
                                         abs(maxServoStates[legServoIndexOffset+0] - minServoStates[legServoIndexOffset+0]));
                                         
   servoStates[legServoIndexOffset+1] = servoStates[legServoIndexOffset+1] + (maxSwingRate*(controller[2] - MIDSTATE) / MIDSTATE) * 
-                                        ((maxServoStates[legServoIndexOffset+1] - minServoStates[legServoIndexOffset+1]) / 
-                                        abs(maxServoStates[legServoIndexOffset+1] - minServoStates[legServoIndexOffset+1]));
+                                        (-(minServoStates[legServoIndexOffset+1] - maxServoStates[legServoIndexOffset+1]) / 
+                                        abs(minServoStates[legServoIndexOffset+1] - maxServoStates[legServoIndexOffset+1]));
                                         
   servoStates[legServoIndexOffset+2] = servoStates[legServoIndexOffset+2] + (maxSwingRate*(controller[5] - controller[4]) / MIDSTATE) * 
                                         ((maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]) / 
@@ -182,12 +182,24 @@ void initializeServoPosition(){
 void writeStatesToServos(){
   for (int k = 0; k < SERVOS; k ++){
     // Clamp servoStates within limits
-    if (servoStates[k] > maxServoStates[k]){
-      servoStates[k] = maxServoStates[k];
+    if (maxServoStates[k] > minServoStates[k]){
+      if (servoStates[k] > maxServoStates[k]){
+        servoStates[k] = maxServoStates[k];
+      }
+      else if (servoStates[k] < minServoStates[k]){
+        servoStates[k] = minServoStates[k];
+      }
     }
-    else if (servoStates[k] < minServoStates[k]){
-      servoStates[k] = minServoStates[k];
+    else {
+      if (servoStates[k] > minServoStates[k]){
+        servoStates[k] = minServoStates[k];
+      }
+      else if (servoStates[k] < maxServoStates[k]){
+        servoStates[k] = maxServoStates[k];
+      }
     }
+    
+    
     // Write state to servo
     joints[k].write(servoStates[k]);
   }
@@ -197,6 +209,11 @@ void writeStatesToServos(){
 // Function to write servoStates to serial
 void writeServoStateSerial(){
   Serial.print("<s");
+  
+  Serial.print(" ");
+  Serial.print(int(currentLeg));
+  Serial .print(" ");
+  
   for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
     Serial.print(" ");
     Serial.print(int(servoStates[i]));
