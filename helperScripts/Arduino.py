@@ -22,7 +22,7 @@ class Arduino:
     # Use different port name list for connection based on platform
     # Linux
     if os.name == "posix":
-        ports = ["/dev/ttyUSB0"]
+        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
     # Windows
     elif os.name == "nt":
         ports = ["COM8", "COM6"]

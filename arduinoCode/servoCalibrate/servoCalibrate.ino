@@ -20,12 +20,12 @@ boolean newData = false;
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {5, 3,  6,
                          9, 10, 11};
-float servoStates[SERVOS] = {90, 90, 90,
-                             90, 90, 90};
-int maxServoStates[SERVOS] = {180, 0,   150,
-                              130, 130, 130};
-int minServoStates[SERVOS] = {0,  90, 15,
-                              40, 40, 40};
+float servoStates[SERVOS] = {120, 90, 15,      // Y, Y, Y
+                             40,  70, 160};    // N, N, Y
+int maxServoStates[SERVOS] = {75, 0,   150,  
+                              65, 165, 40};  
+int minServoStates[SERVOS] = {145, 90, 15,
+                              0,   70, 160};
 
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
@@ -60,12 +60,12 @@ void setup(){
   
   // Setting up servos
   maxSwingRate = maxSwingRate * servoRefresh / 1000;
-  initializeServoPosition();
+  // initializeServoPosition();
   
   for (int i = 0; i < SERVOS; i ++){
     
     // Attach pins to the corresponding servo
-    joints[i].write(minServoStates[i]);
+    joints[i].write(servoStates[i]);
     joints[i].attach(servoPins[i]);
   
     // Delay before continuing

@@ -1,12 +1,13 @@
 import os
+import sys
 import threading
 import time
 
 import numpy as np
 from pyPS4Controller.controller import Controller
 
-from helperScripts.Arduino import Arduino
 from helperScripts import jsonHelper
+from helperScripts.Arduino import Arduino
 
 
 class DS4(Controller):
@@ -23,6 +24,18 @@ class DS4(Controller):
 
         # State array; L3(x2), R3(x2), L2, R2, Square
         self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0]
+
+        # Servo limit array; {legIndex : {min : {}, max : {}}}
+        self.servoLimits = {
+            "0": {
+                "min": None,
+                "max": None
+                },
+            "1": {
+                "min": None,
+                "max": None
+            }
+        }
 
 
 
@@ -103,7 +116,7 @@ class DS4(Controller):
     
     def on_x_press(self):
         """Save minimum servo states to json"""
-        self.servoLimits[str(self.servoState[1])]["min"] = self.servoState.tolist()
+        self.servoLimits[str(self.servoState[0])]["min"] = self.servoState[1:].tolist()
         print("Min: ", self.servoState)
 
         jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
@@ -111,7 +124,7 @@ class DS4(Controller):
 
     def on_triangle_press(self):
         """Save maximum servo states to json"""
-        self.servoLimits[str(self.servoState[1])]["max"] = self.servoState.tolist()
+        self.servoLimits[str(self.servoState[0])]["max"] = self.servoState[1:].tolist()
         print("Max: ", self.servoState)
 
         jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
@@ -249,7 +262,13 @@ if __name__ == "__main__":
     if os.name == "posix":
         ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
         ds4.setContext("servoCalibrate")
-        ds4.run()
+
+        try:
+            ds4.run()
+
+        except KeyboardInterrupt:
+            print("Closing down...")
+            sys.exit()
 
     else:
         print("This platform is unsupported")
