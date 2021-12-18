@@ -12,7 +12,6 @@ boolean newData = false;
 
 
 // Servo variables
-// Initially set to mid position
 // Expands array as required
 #define LEGS 1
 #define SERVOS 6
@@ -20,12 +19,17 @@ boolean newData = false;
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {5, 3,  6,
                          9, 10, 11};
-float servoStates[SERVOS] = {120, 90, 15,      // Y, Y, Y
-                             40,  70, 160};    // N, N, Y
+
+// Initially set to positions specified below
+float servoStates[SERVOS] = {115, 90, 15,      // Hip, shoulder, knee
+                             40,  70, 162};
+
+// Range of movement = {60, 90, 135} degrees for {hip, shoulder, knee}
+
 int maxServoStates[SERVOS] = {75, 0,   150,  
-                              65, 165, 40};  
-int minServoStates[SERVOS] = {145, 90, 15,
-                              0,   70, 160};
+                              60, 160, 27};  
+int minServoStates[SERVOS] = {135, 90, 15,
+                              0,   70, 162};
 
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
