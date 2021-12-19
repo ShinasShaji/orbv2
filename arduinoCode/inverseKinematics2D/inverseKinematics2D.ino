@@ -7,6 +7,9 @@ unsigned int currentTime = 0;               // ms
 unsigned int prevKinematic = 0;             // ms
 unsigned int kinematicsRefreshTime = 1000;    // ms
 
+// Flags
+bool verboseDebug = true;
+
 // Leg length parameters
 float legLengths[4] = {55,      // mm; length from hip to shoulder
                        170,     // mm; length from shoulder to knee
@@ -25,8 +28,6 @@ float maxLegAngles[3] = {40, 90, 165};
 
 // Effective and corrected parameters
 // Lengths
-float groundHeight = 0;     // mm
-float legLengthHipCompensated = 0;     // mm
 // Angles
 float effectiveShoulderFootAngle = 0;  // rad
 float shoulderFootProjectionAngle = 0;
@@ -54,16 +55,14 @@ void loop() {
   if ((currentTime - prevKinematic) >= kinematicsRefreshTime) {
     // Update previous kinematics time step
     prevKinematic = millis();
-    
-    groundHeight = sqrt(pow(legEndPointPosition[0], 2) +
-                        pow(legEndPointPosition[1], 2));
-            
+
     effectiveShoulderFootAngle = atan2(legEndPointPosition[1],
                                        legEndPointPosition[0]);
     
     cosKneeAngle = (pow(legLengths[1], 2) + pow(legLengths[2], 2) - 
                     pow(legEndPointPosition[0], 2) - pow(legEndPointPosition[1], 2)) / 
                    (2 * legLengths[1] * legLengths[2]);
+                   
     // Knee angle
     legAngles[2] = acos(cosKneeAngle);
     
@@ -75,31 +74,39 @@ void loop() {
 
     // Shoulder angle
     legAngles[1] = effectiveShoulderFootAngle - shoulderFootProjectionAngle; 
-               
+                    
     // Print values to serial (for testing)
-    Serial.print("groundHeight: ");
-    Serial.println(groundHeight);
+    if (verboseDebug){
+      Serial.print("legEndPointPosition[0](stepLongitudinal): ");
+      Serial.println(legEndPointPosition[0]);
+      
+      Serial.print("legEndPointPosition[1](groundHeight): ");
+      Serial.println(legEndPointPosition[1]);
+
+      Serial.print("legEndPointPosition[2](stepTransverse): ");
+      Serial.println(legEndPointPosition[2]);
     
-    Serial.print("effectiveShoulderFootAngle: ");
-    Serial.print(effectiveShoulderFootAngle);
-    Serial.print(" ");
-    Serial.println(effectiveShoulderFootAngle*180/PI);
+      Serial.print("effectiveShoulderFootAngle: ");
+      Serial.print(effectiveShoulderFootAngle);
+      Serial.print(" ");
+      Serial.println(effectiveShoulderFootAngle*180/PI);
     
-    Serial.print("shoulderFootProjectionAngle: ");
-    Serial.print(shoulderFootProjectionAngle);
-    Serial.print(" ");
-    Serial.println(shoulderFootProjectionAngle*180/PI);
+      Serial.print("shoulderFootProjectionAngle: ");
+      Serial.print(shoulderFootProjectionAngle);
+      Serial.print(" ");
+      Serial.println(shoulderFootProjectionAngle*180/PI);
+  
+      Serial.print("legAngles[2](Knee): ");
+      Serial.print(legAngles[2]);
+      Serial.print(" ");
+      Serial.println(legAngles[2]*180/PI);
     
-    Serial.print("legAngles[2](Knee): ");
-    Serial.print(legAngles[2]);
-    Serial.print(" ");
-    Serial.println(legAngles[2]*180/PI);
-    
-    Serial.print("legAngles[1](Shoulder): ");
-    Serial.print(legAngles[1]);
-    Serial.print(" ");
-    Serial.println(legAngles[1]*180/PI);
-        
-    Serial.println("\n");
+      Serial.print("legAngles[1](Shoulder): ");
+      Serial.print(legAngles[1]);
+      Serial.print(" ");
+      Serial.println(legAngles[1]*180/PI);
+
+      Serial.println("\n");
+    }
   }
 }
