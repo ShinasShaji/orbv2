@@ -9,6 +9,8 @@ Code to calibrate servos using a ds4 controller
 const byte numChars = 48;
 char receivedChars[numChars];
 boolean newData = false;
+boolean serialConnected = false;
+char testWord[] = "ping";
 
 
 // Servo variables
@@ -60,21 +62,15 @@ unsigned long currentTime = millis();
 void setup(){
   // Starting serial
   Serial.begin(115200);
-  Serial.println("<ping>");
+
+  // Establishing connection through serial
+  establishSerialConnection();
   
   // Setting up servos
   maxSwingRate = maxSwingRate * servoRefresh / 1000;
   // initializeServoPosition();
-  
-  for (int i = 0; i < SERVOS; i ++){
-    
-    // Attach pins to the corresponding servo
-    joints[i].write(servoStates[i]);
-    joints[i].attach(servoPins[i]);
-  
-    // Delay before continuing
-    delay(500);
-  }
+
+  attachServoPins();
     
   currentTime = millis();
 }
@@ -98,6 +94,40 @@ void loop(){
     updateServoStates();
     
     writeStatesToServos();
+  }
+}
+
+
+// Function to attach pins to corresponding servos
+void attachServoPins() {
+  for (int i = 0; i < SERVOS; i ++){  
+    // Attach pins to the corresponding servo
+    joints[i].write(servoStates[i]);
+    joints[i].attach(servoPins[i]);
+  
+    // Delay before continuing
+    delay(500);
+  }
+}
+
+
+// Function to establish connection through serial
+void establishSerialConnection() {
+  while (!serialConnected) {
+    Serial.print("<");
+    Serial.print(testWord);
+    Serial.println(">");
+    recieveSerialData();
+
+    serialConnected = true; 
+
+    for (int i = 0; receivedChars[i]!='\0'; i++) {
+      if (receivedChars[i]!=testWord[i]) {
+        serialConnected = false;
+        
+        continue;
+      }
+    }
   }
 }
 
@@ -211,26 +241,27 @@ void writeStatesToServos(){
 
 
 // Function to write servoStates to serial
-void writeServoStateSerial(){
+void writeServoStateSerial() {
   Serial.print("<s");
   
   Serial.print(" ");
   Serial.print(int(currentLeg));
-  Serial .print(" ");
+  Serial.print(" ");
   
-  for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
+  for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++) {
     Serial.print(" ");
     Serial.print(int(servoStates[i]));
   }
+  
   Serial.println(">");
 }
 
 
 // Function to check for leg change
-void checkLegChange(){
+void checkLegChange() {
   static boolean legChange = false;
   
-  if ((controller[6]==1)&&(legChange==false)){
+  if ((controller[6]==1)&&(legChange==false)) {
     legChange = true;
     currentLeg = currentLeg + 1;
     
@@ -239,7 +270,7 @@ void checkLegChange(){
     }
   }
   
-  else if ((controller[6]==0)&&(legChange==true)){
+  else if ((controller[6]==0)&&(legChange==true)) {
     legChange = false;
   }
 }
