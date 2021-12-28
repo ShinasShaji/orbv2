@@ -188,10 +188,15 @@ void loop() {
     
     // Print values to serial (for testing)
     printDebug();
+
+    // Write kinematics state to serial (for data display/logging)
+    writeKinematicsStateSerial();
   }
   // IK loop end
 }
 
+
+// Function to attach pins to corresponding servos
 void attachServoPins() {
   for (int i = 0; i < SERVOS; i ++){  
     // Attach pins to the corresponding servo
@@ -407,4 +412,20 @@ void printDebug() {
       
     Serial.print("\n");
   }
+}
+
+
+void writeKinematicsStateSerial() {
+  Serial.print("<k");
+
+  Serial.print(" ");
+  Serial.print(int(currentLeg));
+  Serial.print(" ");
+
+  for (int i = legIndexOffset; i < (legIndexOffset+3); i++) {
+    Serial.print(" ");
+    Serial.print(int(legEndpointPosition[i]));
+  }
+
+  Serial.println(">");
 }
