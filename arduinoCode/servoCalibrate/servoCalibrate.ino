@@ -13,6 +13,7 @@ boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
 
+
 // Servo variables
 // Expands array as required
 #define LEGS 1
