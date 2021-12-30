@@ -12,7 +12,6 @@ char receivedChars[numChars];
 boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
-unsigned int serialConnInterval = 500;
 
 // Servo variables
 // Expands array as required
@@ -79,7 +78,7 @@ void loop(){
   currentTime = millis();
   
   // Recieve data from serial
-  recieveSerialData();
+  receiveSerialData();
 
   if (newData){
     newData = false;
@@ -115,31 +114,31 @@ void establishSerialConnection() {
   Serial.begin(BAUDRATE);
 
   while (!serialConnected) {
-    Serial.print("<");
-    Serial.print(testWord);
-    Serial.println(">");
-    delay(serialConnInterval);
-
-    recieveSerialData();
+    receiveSerialData();
   
     if (newData) {
       newData = false;
-      serialConnected = true; 
-
+      
+      serialConnected = true;
+      
       for (int i = 0; receivedChars[i]!='\0'; i++) {
         if (receivedChars[i]!=testWord[i]) {
           serialConnected = false;
-        
+          
           continue;
         }
       }
-    }
+      
+      Serial.print("<");
+      Serial.print(testWord);
+      Serial.println(">");
+    }     
   }
 }
 
 
 // Function to remove start and stop characters from serial message
-void recieveSerialData(){
+void receiveSerialData(){
   static boolean recvInProgress = false;
   static byte ndx = 0;
   static char startMarker = '<';

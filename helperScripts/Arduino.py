@@ -3,6 +3,7 @@
 import os
 import time
 import re
+import multiprocessing
 
 import serial
 from serial.serialutil import SerialTimeoutException
@@ -36,6 +37,8 @@ class Arduino:
         self.arduino.baudrate = self.baudrate
         self.connected = False
 
+        self.syncEvent = multiprocessing.Event()
+
 
     def attemptPortConnection(self, port):
         """Attempt to connect on the passed port"""
@@ -51,7 +54,7 @@ class Arduino:
                 self.writeToSerial(self.testWord)
                 time.sleep(self.interval)
                 
-                if self.readFromSerial() == self.testWord:
+                if self.readFromSerial() is not None:                    
                     print(''.join(['Connected on port ', port, '.']))
                     self.arduino.flushInput()
 
@@ -89,6 +92,8 @@ class Arduino:
             if self.verbose:
                 print("Serial write:", content)
 
+            self.syncEvent.clear()
+
         except:
             print("Could not send message through serial")
 
@@ -106,6 +111,8 @@ class Arduino:
             if content:
                 if self.verbose:
                     print("Serial read:", content)
+
+                self.syncEvent.set()
 
                 return content
             else:
