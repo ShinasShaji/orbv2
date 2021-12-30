@@ -6,12 +6,13 @@ Code to calibrate servos using a ds4 controller
 
 
 // Serial recieve variables
+#define BAUDRATE 115200
 const byte numChars = 48;
 char receivedChars[numChars];
 boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
-
+unsigned int serialConnInterval = 500;
 
 // Servo variables
 // Expands array as required
@@ -60,9 +61,6 @@ unsigned long currentTime = millis();
 
 
 void setup(){
-  // Starting serial
-  Serial.begin(115200);
-
   // Establishing connection through serial
   establishSerialConnection();
   
@@ -113,19 +111,27 @@ void attachServoPins() {
 
 // Function to establish connection through serial
 void establishSerialConnection() {
+  // Starting serial
+  Serial.begin(BAUDRATE);
+
   while (!serialConnected) {
     Serial.print("<");
     Serial.print(testWord);
     Serial.println(">");
+    delay(serialConnInterval);
+
     recieveSerialData();
+  
+    if (newData) {
+      newData = false;
+      serialConnected = true; 
 
-    serialConnected = true; 
-
-    for (int i = 0; receivedChars[i]!='\0'; i++) {
-      if (receivedChars[i]!=testWord[i]) {
-        serialConnected = false;
+      for (int i = 0; receivedChars[i]!='\0'; i++) {
+        if (receivedChars[i]!=testWord[i]) {
+          serialConnected = false;
         
-        continue;
+          continue;
+        }
       }
     }
   }

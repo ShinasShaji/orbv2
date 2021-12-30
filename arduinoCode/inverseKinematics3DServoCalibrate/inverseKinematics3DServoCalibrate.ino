@@ -26,9 +26,13 @@ bool verboseDebug = true;
 
 
 // Serial recieve variables
+#define BAUDRATE 115200
 const byte numChars = 48;
 char receivedChars[numChars];
 bool newData = false;
+bool serialConnected = false;
+char testWord[] = "ping";
+unsigned int serialConnInterval = 500;
 
 
 // Controller state
@@ -93,10 +97,10 @@ float shoulderAngleSupplementary = 0;
 
 
 void setup() {
-  // Starting serial
-  Serial.begin(115200);
-  Serial.println("<ping>");
+  // Establishing connection through serial
+  establishSerialConnection();
 
+  // Setting up servos
   attachServoPins();
 
   // Scaling to kinematics time step
@@ -193,6 +197,35 @@ void loop() {
     writeKinematicsStateSerial();
   }
   // IK loop end
+}
+
+
+// Function to establish connection through serial
+void establishSerialConnection() {
+  // Starting serial
+  Serial.begin(BAUDRATE);
+
+  while (!serialConnected) {
+    Serial.print("<");
+    Serial.print(testWord);
+    Serial.println(">");
+    delay(serialConnInterval);
+
+    recieveSerialData();
+  
+    if (newData) {
+      newData = false;
+      serialConnected = true; 
+
+      for (int i = 0; receivedChars[i]!='\0'; i++) {
+        if (receivedChars[i]!=testWord[i]) {
+          serialConnected = false;
+        
+          continue;
+        }
+      }
+    }
+  }
 }
 
 
