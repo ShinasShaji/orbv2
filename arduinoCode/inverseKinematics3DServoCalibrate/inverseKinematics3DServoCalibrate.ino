@@ -29,8 +29,8 @@ bool verboseDebug = true;
 #define BAUDRATE 115200
 const byte numChars = 48;
 char receivedChars[numChars];
-bool newData = false;
-bool serialConnected = false;
+boolean newData = false;
+boolean serialConnected = false;
 char testWord[] = "ping";
 
 
@@ -119,10 +119,8 @@ void loop() {
     newData = false;
     extractControllerState();
     checkLegChange();
-    // Write servo state to serial
-    writeServoStateSerial();
-    // Write kinematics state to serial
-    writeKinematicsStateSerial();
+    // Write servo and kinematics states to serial
+    writeStatesSerial();
   } 
 
   // IK loop
@@ -241,7 +239,7 @@ void attachServoPins() {
 }
 
 
-// Function to remove start and stop characters from serial message
+// Function to remove limiters from serial message
 void receiveSerialData() {
   static boolean recvInProgress = false;
   static byte ndx = 0;
@@ -371,22 +369,7 @@ void writeStatesToServos(){
 }
 
 
-// Function to write servoStates to serial
-void writeServoStateSerial(){
-  Serial.print("<s");
-  
-  Serial.print(" ");
-  Serial.print(int(currentLeg));
-  Serial .print(" ");
-  
-  for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
-    Serial.print(" ");
-    Serial.print(int(servoStates[i]));
-  }
-  Serial.println(">");
-}
-
-
+// Print endpoint position and actuator angles
 void printDebug() {
   if (verboseDebug) {
     Serial.print("Current leg: ");
@@ -447,16 +430,39 @@ void printDebug() {
 }
 
 
-void writeKinematicsStateSerial() {
-  Serial.print("<k");
+void writeStatesSerial() {
+  static boolean writeServo = true;
+  static boolean writeKinematics = true;
 
-  Serial.print(" ");
-  Serial.print(int(currentLeg));
-  Serial.print(" ");
+  Serial.print("<");
 
-  for (int i = legIndexOffset; i < (legIndexOffset+3); i++) {
+  if (writeServo) {
+    Serial.print("s");
     Serial.print(" ");
-    Serial.print(int(legEndpointPosition[i]));
+    Serial.print(int(currentLeg));
+    Serial .print(" ");
+  
+    for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
+      Serial.print(" ");
+      Serial.print(int(servoStates[i]));
+    }
+  }
+
+  if (writeKinematics) {
+    if (writeServo) {
+      Serial.print(" ");
+    }
+
+    Serial.print("k");
+
+    Serial.print(" ");
+    Serial.print(int(currentLeg));
+    Serial.print(" ");
+
+    for (int i = legIndexOffset; i < (legIndexOffset+3); i++) {
+      Serial.print(" ");
+      Serial.print(int(legEndpointPosition[i]));
+    }
   }
 
   Serial.println(">");
