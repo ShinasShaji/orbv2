@@ -3,6 +3,7 @@
 import os
 import time
 import re
+import multiprocessing
 
 import serial
 from serial.serialutil import SerialTimeoutException
@@ -15,7 +16,9 @@ class Arduino:
     baudrate = 115200
     connected = None
     timeout = 2
-    interval = 0.2    
+    interval = 0.2
+
+    testWord = "ping"
 
     verbose = True
 
@@ -34,6 +37,8 @@ class Arduino:
         self.arduino.baudrate = self.baudrate
         self.connected = False
 
+        self.syncEvent = multiprocessing.Event()
+
 
     def attemptPortConnection(self, port):
         """Attempt to connect on the passed port"""
@@ -46,22 +51,21 @@ class Arduino:
             self.arduino.flushInput()
 
             while not self.connected:
-                self.writeToSerial("ping")
+                self.writeToSerial(self.testWord)
                 time.sleep(self.interval)
                 
-                if self.arduino.in_waiting:
-                    self.readFromSerial()
-                    
+                if self.readFromSerial() is not None:                    
                     print(''.join(['Connected on port ', port, '.']))
                     self.arduino.flushInput()
 
                     self.connected = True
                     
                     return True
-
-                count += 1
-                if count * self.interval > self.timeout:
-                    raise SerialTimeoutException(''.join(['Could not connect on ', \
+            
+                else: 
+                    count += 1
+                    if count * self.interval > self.timeout:
+                        raise SerialTimeoutException(''.join(['Could not connect on ', \
                                                 port, ' within timeout interval.']))
         except:
             print(''.join(['Could not connect on port ', port, '.']))
@@ -88,6 +92,8 @@ class Arduino:
             if self.verbose:
                 print("Serial write:", content)
 
+            self.syncEvent.clear()
+
         except:
             print("Could not send message through serial")
 
@@ -105,6 +111,8 @@ class Arduino:
             if content:
                 if self.verbose:
                     print("Serial read:", content)
+
+                self.syncEvent.set()
 
                 return content
             else:

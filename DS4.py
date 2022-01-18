@@ -6,7 +6,6 @@ import time
 import numpy as np
 from pyPS4Controller.controller import Controller
 
-from helperScripts import jsonHelper
 from helperScripts.Arduino import Arduino
 
 
@@ -24,19 +23,6 @@ class DS4(Controller):
 
         # State array; L3(x2), R3(x2), L2, R2, Square
         self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0]
-
-        # Servo limit array; {legIndex : {min : {}, max : {}}}
-        self.servoLimits = {
-            "0": {
-                "min": None,
-                "max": None
-                },
-            "1": {
-                "min": None,
-                "max": None
-            }
-        }
-
 
 
     # L3
@@ -113,22 +99,6 @@ class DS4(Controller):
     def on_square_release(self):
         self.updateState("Square", value = 0)
 
-    
-    def on_x_press(self):
-        """Save minimum servo states to json"""
-        self.servoLimits[str(self.servoState[0])]["min"] = self.servoState[1:].tolist()
-        print("Min: ", self.servoState)
-
-        jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
-
-
-    def on_triangle_press(self):
-        """Save maximum servo states to json"""
-        self.servoLimits[str(self.servoState[0])]["max"] = self.servoState[1:].tolist()
-        print("Max: ", self.servoState)
-
-        jsonHelper.dictToJson(self.servoLimits, self.servoCalibrationPath)
-
 
     def on_options_press(self):
         """Exit on options press"""
@@ -193,18 +163,33 @@ class DS4(Controller):
                 print("Square", self.state[6])
 
 
-    def extractServoState(self, message):
+    def extractStates(self, message):
         """Extracts servo states from received serial message"""
         message = str(message).split()
 
-        if message[0] == "s" and len(message) == 5:
-            self.servoState = np.array([message[1], message[2], \
-                                        message[3], message[4]], \
-                                        dtype=np.int16)
+        # Servo states
+        if "s" in message:
+            index = message.index("s")
+            try:
+                self.servoState = np.array([message[index+1], message[index+2], \
+                                            message[index+3], message[index+4]], \
+                                            dtype=np.int16)
+            except:
+                self.servoState = None
+
+        # Kinematics states
+        if "k" in message:
+            index = message.index("k")
+            try:
+                self.kinematicsState = np.array([message[index+1], message[index+2], \
+                                            message[index+3], message[index+4]], \
+                                            dtype=np.int16)
+            except:
+                self.kinematicsState = None
             
 
-    def serialServoCalibrate(self):
-        """Writes current controller state to serial for servo calibration. Run as thread"""
+    def controllerSerial(self):
+        """Writes current controller state to serial. Run as thread"""
         while self.arduino.connected and not self.exitFlag:
             self.currentTime = time.perf_counter()
             timeElapsed = self.currentTime - self.prevTxTime
@@ -218,7 +203,7 @@ class DS4(Controller):
 
                 self.arduino.writeToSerial(content)
 
-                self.extractServoState(self.arduino.readFromSerial())
+                self.extractStates(self.arduino.readFromSerial())
 
                 self.prevTxTime = self.currentTime
                 
@@ -239,7 +224,7 @@ class DS4(Controller):
             self.verbose = True
             self.listen()
     
-        elif self.context == "servoCalibrate":
+        elif self.context == "control":
             # Connect to Arduino
             self.arduino = Arduino()
             self.arduino.attemptConnection()
@@ -247,12 +232,11 @@ class DS4(Controller):
             self.txInterval = 0.1
 
             self.servoState = None
-            self.servoLimits = {"0": {"max":None, "min":None}}
-            self.servoCalibrationPath = "data/servoCalibration.json"
+            self.kinematicsState = None
 
             # Create thread to periodically write state to serial
-            self.servoCalibrateThread = threading.Thread(target=self.serialServoCalibrate)
-            self.servoCalibrateThread.start()
+            self.controllerSerialThread = threading.Thread(target=self.controllerSerial)
+            self.controllerSerialThread.start()
 
             self.listen()
                 
@@ -261,7 +245,7 @@ class DS4(Controller):
 if __name__ == "__main__":
     if os.name == "posix":
         ds4 = DS4(interface="/dev/input/js0", connecting_using_ds4drv=False)
-        ds4.setContext("servoCalibrate")
+        ds4.setContext("control")
 
         try:
             ds4.run()

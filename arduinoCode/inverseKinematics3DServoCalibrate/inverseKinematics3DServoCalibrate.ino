@@ -26,9 +26,12 @@ bool verboseDebug = true;
 
 
 // Serial recieve variables
+#define BAUDRATE 115200
 const byte numChars = 48;
 char receivedChars[numChars];
-bool newData = false;
+boolean newData = false;
+boolean serialConnected = false;
+char testWord[] = "ping";
 
 
 // Controller state
@@ -53,6 +56,7 @@ int servoPins[SERVOS] = {5, 3,  6,
 // Initially set to positions specified below
 float servoStates[SERVOS] = {115, 90, 15,      // Hip, shoulder, knee
                              40,  70, 162};
+float prevServoStates[SERVOS];
 // Range of movement = {60, 90, 135} degrees for {hip, shoulder, knee}
 int maxServoStates[SERVOS] = {75, 0,   150,  
                               0,  160, 27};  
@@ -60,11 +64,14 @@ int minServoStates[SERVOS] = {135, 90, 15,
                               60,  70, 162};
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
+// Flags
+boolean jointLimitsViolated = false;
 
 
 // Leg endpoint position; each leg has own reference
 float legEndpointPosition[3*(LEGS+1)] = {100, 200, 75,  // mm; {back, down, outer}
-                                         100, 200, 75}; 
+                                         100, 200, 75};
+float prevLegEndpointPosition[3*(LEGS+1)];
 float maxEndpointVelocity = 50; // mm/s
 
 
@@ -93,14 +100,18 @@ float shoulderAngleSupplementary = 0;
 
 
 void setup() {
-  // Starting serial
-  Serial.begin(115200);
-  Serial.println("<ping>");
+  // Establishing connection through serial
+  establishSerialConnection();
 
+  // Setting up servos
   attachServoPins();
 
   // Scaling to kinematics time step
   maxEndpointVelocity = maxEndpointVelocity * kinematicsRefreshTime / 1000;
+
+  // Updating previous state arrays
+  updatePrevServoStates();
+  updatePrevLegEndpointPosition();
   
   currentTime = millis();
 }
@@ -111,12 +122,13 @@ void loop() {
   currentTime = millis();
 
   // Recieve data from serial
-  recieveSerialData();
+  receiveSerialData();
   if (newData){
     newData = false;
     extractControllerState();
     checkLegChange();
-    writeServoStateSerial();
+    // Write servo and kinematics states to serial
+    writeStatesSerial();
   } 
 
   // IK loop
@@ -192,6 +204,37 @@ void loop() {
   // IK loop end
 }
 
+
+// Function to establish connection through serial
+void establishSerialConnection() {
+  // Starting serial
+  Serial.begin(BAUDRATE);
+
+  while (!serialConnected) {
+    receiveSerialData();
+  
+    if (newData) {
+      newData = false;
+      
+      serialConnected = true;
+      
+      for (int i = 0; receivedChars[i]!='\0'; i++) {
+        if (receivedChars[i]!=testWord[i]) {
+          serialConnected = false;
+          
+          continue;
+        }
+      }
+      
+      Serial.print("<");
+      Serial.print(testWord);
+      Serial.println(">");
+    }     
+  }
+}
+
+
+// Function to attach pins to corresponding servos
 void attachServoPins() {
   for (int i = 0; i < SERVOS; i ++){  
     // Attach pins to the corresponding servo
@@ -204,8 +247,8 @@ void attachServoPins() {
 }
 
 
-// Function to remove start and stop characters from serial message
-void recieveSerialData(){
+// Function to remove limiters from serial message
+void receiveSerialData() {
   static boolean recvInProgress = false;
   static byte ndx = 0;
   static char startMarker = '<';
@@ -308,48 +351,46 @@ void mapAnglesToServos() {
 
 // Function to write servoState to all servos
 void writeStatesToServos(){
-  for (int k = 0; k < SERVOS; k ++){
+  jointLimitsViolated = false;
+  
+  for (int k = 0; k < SERVOS; k ++) {
     // Clamp servoStates within limits
     if (maxServoStates[k] > minServoStates[k]){
       if (servoStates[k] > maxServoStates[k]){
         servoStates[k] = maxServoStates[k];
+        jointLimitsViolated = true;
       }
       else if (servoStates[k] < minServoStates[k]){
         servoStates[k] = minServoStates[k];
+        jointLimitsViolated = true;
       }
     }
     else {
       if (servoStates[k] > minServoStates[k]){
         servoStates[k] = minServoStates[k];
+        jointLimitsViolated = true;
       }
       else if (servoStates[k] < maxServoStates[k]){
         servoStates[k] = maxServoStates[k];
+        jointLimitsViolated = true;
       }
     }
     
-    
+    // Use previous states if joint limits violated
+    if (jointLimitsViolated) {
+      restorePrevServoStates();
+      restorePrevLegEndpointPosition();
+
+      break;
+    }
+
     // Write state to servo
     joints[k].write(servoStates[k]);
   }
 }
 
 
-// Function to write servoStates to serial
-void writeServoStateSerial(){
-  Serial.print("<s");
-  
-  Serial.print(" ");
-  Serial.print(int(currentLeg));
-  Serial .print(" ");
-  
-  for (int i = (3*currentLeg); i < ((3*currentLeg)+3); i ++){
-    Serial.print(" ");
-    Serial.print(int(servoStates[i]));
-  }
-  Serial.println(">");
-}
-
-
+// Print endpoint position and leg angles
 void printDebug() {
   if (verboseDebug) {
     Serial.print("Current leg: ");
@@ -406,5 +447,76 @@ void printDebug() {
     Serial.println(" ms");
       
     Serial.print("\n");
+  }
+}
+
+
+void writeStatesSerial() {
+  static boolean writeServo = true;
+  static boolean writeKinematics = true;
+
+  Serial.print("<");
+
+  if (writeServo) {
+    Serial.print("s");
+    Serial.print(" ");
+    Serial.print(int(currentLeg));
+    Serial .print(" ");
+  
+    for (int i = legIndexOffset; i < (legIndexOffset+3); i ++){
+      Serial.print(" ");
+      Serial.print(int(servoStates[i]));
+    }
+  }
+
+  if (writeKinematics) {
+    if (writeServo) {
+      Serial.print(" ");
+    }
+
+    Serial.print("k");
+
+    Serial.print(" ");
+    Serial.print(int(currentLeg));
+    Serial.print(" ");
+
+    for (int i = legIndexOffset; i < (legIndexOffset+3); i++) {
+      Serial.print(" ");
+      Serial.print(int(legEndpointPosition[i]));
+    }
+  }
+
+  Serial.println(">");
+}
+
+
+// Function to update previous servo state array
+void updatePrevServoStates() {
+  for (int i = 0; i < SERVOS; i++) {
+    prevServoStates[i] = servoStates[i];
+  }
+}
+
+
+// Function to update previous leg endpoint position array
+void updatePrevLegEndpointPosition() {
+  for (int i = 0; i < (3*(LEGS+1)); i++) {
+    prevLegEndpointPosition[i] = legEndpointPosition[i];
+  }
+}
+
+
+// Restore servo states from previous
+void restorePrevServoStates() {
+  for (int i = 0; i < SERVOS; i++) {
+    servoStates[i] = prevServoStates[i];
+  }
+}
+
+
+// Restore leg endpoint position from previous
+void restorePrevLegEndpointPosition() {
+  for (int i = 0; i < (3*(LEGS+1)); i++) {
+    legEndpointPosition[i] = prevLegEndpointPosition[i];
   }
 }
