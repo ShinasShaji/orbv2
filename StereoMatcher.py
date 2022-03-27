@@ -1,4 +1,3 @@
-import datetime
 import math
 
 import cv2
@@ -7,11 +6,12 @@ import numpy as np
 
 from helperScripts import jsonHelper
 from helperScripts.Keys import Keys
+from VoxelGrid import VoxelGrid
 
 
 class StereoMatcher:
     """Class to handle StereoSGBM and StereoBM stereo matchers"""
-    def __init__(self, matcher="SGBM", vertical=True, \
+    def __init__(self, imageProcessor, matcher="SGBM", vertical=True, \
                                                 createRightMatcher=False):
         assert matcher in ["SGBM", "BM"], "Invalid matcher selection"
 
@@ -21,10 +21,16 @@ class StereoMatcher:
         self.hasRightMatcher = createRightMatcher
         self.parametersLoaded = False
 
+        # Object references
+        self.imageProcessor = imageProcessor
+
         # Initializing matcher
         self.loadParameters()
         self.setBaseline(32)
         self.createMatcher()
+
+        # Initializing dependent objects
+        self.voxelGrid = VoxelGrid(stereoMatcher=self)
 
 
     def saveParameters(self, path="data/"):
@@ -101,11 +107,10 @@ class StereoMatcher:
     def loadParameters(self):
         """Loads matcher parameters from json; if unavailable loads default
         parameters"""
-        if not self.parametersLoaded:
-            try:
-                self.loadParametersFromJson()
-            except:
-                self.loadDefaultParameters()
+        try:
+            self.loadParametersFromJson()
+        except:
+            self.loadDefaultParameters()
 
         
     def createSGBM(self):
@@ -216,6 +221,16 @@ class StereoMatcher:
         self.depthMap = (focalLength*self.baseline)/self.disparityMapL[:]
 
     
+    def saveDepthMap(self, path="captures/", imageFormat=".png"):
+        """Save the current depth map"""
+        imageName = "".join(["topDepth_{}".format(\
+                        self.imageProcessor.timeString), imageFormat])
+
+        cv2.imwrite("".join([path, imageName]), \
+                                    self.depthMap.astype(np.uint16))
+        print("Saved {} to {}".format(imageName, path))
+
+    
     def writePly(self, points, imageL):
         """Export current point cloud as a .ply"""
         plyHeader = "\n".join([\
@@ -237,29 +252,13 @@ class StereoMatcher:
         colors = colors.reshape(-1, 3)
         vertices = np.hstack([vertices, colors])
 
-        timeString = datetime.datetime.now().strftime("%d%m%y%H%M%S")
-        fileName = "".join(["pointCloud_", timeString, ".ply"])
+        fileName = "".join(["pointCloud_", \
+                                self.imageProcessor.timeString, ".ply"])
 
         with open(fileName, 'wb') as plyFile:
             plyFile.write((plyHeader % dict(vert_num=len(vertices)))\
                                                         .encode('utf-8'))
             np.savetxt(plyFile, vertices, fmt='%f %f %f %d %d %d ')
-                    
-
-    def referenceImageProcessor(self, imageProcessor):
-        """Create class references to passed ImageProcessor"""
-        self.imageProcessor = imageProcessor
-
-    
-    def referenceVoxelGrid(self, voxelGrid):
-        """Creates class references to passed VoxelGrid"""
-        self.voxelGrid = voxelGrid
-
-
-    def captureImages(self, path="captures/testImages"):
-        """Call the image capture method of the passed ImageProcessing
-        object"""
-        self.imageProcessor.captureImages(path)
 
     
     def tuneParameters(self):
@@ -271,13 +270,15 @@ class StereoMatcher:
             return False
 
         elif key == Keys.p: # Generate point cloud on p
-            self.generatePointCloud()
+            self.voxelGrid.viewVoxelGrid()
 
-        elif key == Keys.z: # Generate depth map on z
-            self.generateDepthMap()
+        elif key == Keys.o: # Reset voxel grid on o
+            self.voxelGrid.resetVoxelGrid()
 
         elif key == Keys.space: # Capture images on space
-            self.captureImages()
+            self.imageProcessor.captureImages()
+            self.generateDepthMap()
+            self.saveDepthMap()
 
         elif key == Keys.b: # blocksize on b
             print("blockSize: {}".format(self.blockSize))
