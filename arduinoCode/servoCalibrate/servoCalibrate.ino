@@ -25,14 +25,14 @@ int servoPins[SERVOS] = {5, 3,  6,
 
 // Initially set to positions specified below
 float servoStates[SERVOS] = {115, 90, 15,      // Hip, shoulder, knee
-                             40,  70, 162};
+                             40, 136, 162};
 
 // Range of movement = {60, 90, 135} degrees for {hip, shoulder, knee}
 
 int maxServoStates[SERVOS] = {75, 0,   150,  
-                              60, 160, 27};  
+                              60, 136, 27};  
 int minServoStates[SERVOS] = {135, 90, 15,
-                              0,   70, 162};
+                              0,   37, 162};
 
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
@@ -104,7 +104,7 @@ void attachServoPins() {
     joints[i].attach(servoPins[i]);
   
     // Delay before continuing
-    delay(500);
+    delay(100);
   }
 }
 
@@ -121,7 +121,7 @@ void establishSerialConnection() {
       newData = false;
       
       serialConnected = true;
-      
+     
       for (int i = 0; receivedChars[i]!='\0'; i++) {
         if (receivedChars[i]!=testWord[i]) {
           serialConnected = false;
@@ -133,7 +133,12 @@ void establishSerialConnection() {
       Serial.print("<");
       Serial.print(testWord);
       Serial.println(">");
-    }     
+    }
+
+    else {
+      delay(200);
+    }
+    
   }
 }
 

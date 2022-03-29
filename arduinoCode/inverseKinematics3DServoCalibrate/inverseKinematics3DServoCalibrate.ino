@@ -222,14 +222,19 @@ void establishSerialConnection() {
         if (receivedChars[i]!=testWord[i]) {
           serialConnected = false;
           
-          continue;
+          break;
         }
       }
       
       Serial.print("<");
       Serial.print(testWord);
       Serial.println(">");
-    }     
+    }
+
+    else {
+      delay(200);
+    }    
+    
   }
 }
 
@@ -242,7 +247,7 @@ void attachServoPins() {
     joints[i].attach(servoPins[i]);
   
     // Delay before continuing
-    delay(500);
+    delay(100);
   }
 }
 
@@ -428,19 +433,13 @@ void printDebug() {
     Serial.println(shoulderAngleSupplementary*180/PI);
 
     Serial.print("legAngles[0](Hip): ");
-    Serial.print(legAngles[0]);
-    Serial.print(" ");
-    Serial.println(legAngles[0]*180/PI);
+    Serial.println(legAngles[0]);
 
     Serial.print("legAngles[1](Shoulder): ");
-    Serial.print(legAngles[1]);
-    Serial.print(" ");
-    Serial.println(legAngles[1]*180/PI);
+    Serial.println(legAngles[1]);
 
     Serial.print("legAngles[2](Knee): ");
-    Serial.print(legAngles[2]);
-    Serial.print(" ");
-    Serial.println(legAngles[2]*180/PI);
+    Serial.println(legAngles[2]);
 
     Serial.print("Time taken: ");
     Serial.print(millis()-prevKinematic);

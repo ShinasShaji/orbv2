@@ -15,7 +15,7 @@ class Arduino:
     arduino = None
     baudrate = 115200
     connected = None
-    timeout = 2
+    timeout = 10
     interval = 0.2
 
     testWord = "ping"
@@ -25,7 +25,7 @@ class Arduino:
     # Use different port name list for connection based on platform
     # Linux
     if os.name == "posix":
-        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1"]
+        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2"]
     # Windows
     elif os.name == "nt":
         ports = ["COM8", "COM6"]
@@ -87,7 +87,8 @@ class Arduino:
     def writeToSerial(self, content):
         """Write the passed content to serial with start and end characters"""
         try:
-            self.arduino.write("".join(["<", content, ">"]).encode("utf_8"))
+            message = "".join(["<", content, ">"]).encode("utf_8")
+            self.arduino.write(message)
 
             if self.verbose:
                 print("Serial write:", content)
