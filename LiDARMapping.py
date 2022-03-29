@@ -1,7 +1,7 @@
 from pyrplidar import PyRPlidar
 
 lidar = PyRPlidar()
-lidar.connect(port="COM3", baudrate=57600)
+lidar.connect(port="/dev/ttyUSB0", baudrate=57600)
 # Linux   : "/dev/ttyUSB0"
 # MacOS   : "/dev/cu.SLAB_USBtoUART"
 # Windows : "COM5"
