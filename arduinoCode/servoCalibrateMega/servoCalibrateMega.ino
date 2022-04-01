@@ -12,6 +12,7 @@ char receivedChars[numChars];
 boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
+unsigned int pingInterval = 500;
 
 
 // Servo variables
@@ -20,25 +21,25 @@ char testWord[] = "ping";
 #define SERVOS 12
 
 Servo joints[SERVOS];
-int servoPins[SERVOS] = {5,  3,  6,
-                         9, 10, 11,
-                         1,  2,  4,
-                         7,  8, 12};
+int servoPins[SERVOS] = {2,  3,  4,
+                         5, 6, 7,
+                         8,  9,  10,
+                         11,  12, 13};
 
 // Initially set to positions specified below
-float servoStates[SERVOS] = {115,  90,  15,      // Hip, shoulder, knee
-                              40, 136, 162,
+float servoStates[SERVOS] = {60,  38,  35,      // Hip, shoulder, knee
+                              140, 138, 180,
                               90,  90,  90,
                               90,  90,  90};
 
 // Range of movement = {60, 90, 135} degrees for {hip, shoulder, knee}
 
-int maxServoStates[SERVOS] = { 75,   0, 150,  
-                               60, 136,  27,
+int maxServoStates[SERVOS] = { 80, 130, 144,  
+                               120, 38,  63,
                               120, 135, 158,
                               120, 135, 158};  
-int minServoStates[SERVOS] = {135, 90,  15,
-                                0, 37, 162,
+int minServoStates[SERVOS] = {40, 38,  35,
+                                162, 138, 180,
                                60, 45,  22,
                                60, 45,  22};
 
@@ -119,17 +120,17 @@ void attachServoPins() {
 
 // Function to establish connection through serial
 void establishSerialConnection() {
-  // Starting serial
-  Serial.begin(BAUDRATE);
-
-  while (!serialConnected) {
-    receiveSerialData();
+  Serial.begin(115200);
   
+  while (!serialConnected) {
+    
+    receiveSerialData();
+    
     if (newData) {
       newData = false;
       
       serialConnected = true;
-     
+      
       for (int i = 0; receivedChars[i]!='\0'; i++) {
         if (receivedChars[i]!=testWord[i]) {
           serialConnected = false;
@@ -142,12 +143,15 @@ void establishSerialConnection() {
       Serial.print(testWord);
       Serial.println(">");
     }
-
+   
     else {
-      delay(200);
-    }
-    
-  }
+      delay(pingInterval);
+      
+      Serial.print("<");
+      Serial.print(testWord);
+      Serial.println(">");
+    } 
+  }  
 }
 
 
