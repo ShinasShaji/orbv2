@@ -4,7 +4,7 @@
 #right click to clear the spot
 import pygame
 import math
-from Queue import PriorityQueue
+from queue import PriorityQueue
 
 #visualization
 #Window Setup
