@@ -16,7 +16,7 @@ class Arduino:
     baudrate = 115200
     connected = None
     timeout = 10
-    interval = 0.2
+    interval = 0.5
 
     testWord = "ping"
 
