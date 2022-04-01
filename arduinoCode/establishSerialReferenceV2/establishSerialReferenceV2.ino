@@ -1,9 +1,18 @@
+
+// Serial receive variables
 #define BAUDRATE 115200
 const byte numChars = 48;
 char receivedChars[numChars];
 boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
+
+// Internal variables for receiveSerialData()
+boolean recvInProgress = false;
+byte ndx = 0;
+char startMarker = '<';
+char endMarker = '>';
+char rc;
 
 
 void setup() {
@@ -20,44 +29,45 @@ void loop() {
 
 
 void establishSerialConnection() {
-  // Starting serial
-  Serial.begin(BAUDRATE);
-
-  while (!serialConnected) {
-    receiveSerialData();
+  Serial.begin(115200);
   
+  while (!serialConnected) {
+    
+    receiveSerialData();
+    
     if (newData) {
       newData = false;
       
       serialConnected = true;
       
-      /*
       for (int i = 0; receivedChars[i]!='\0'; i++) {
         if (receivedChars[i]!=testWord[i]) {
           serialConnected = false;
           
-          continue;
+          break;
         }
       }
-      */
       
       Serial.print("<");
       Serial.print(testWord);
       Serial.println(">");
-    }     
-  }
+    }
+   
+    else {
+      delay(500);
+      
+      Serial.print("<");
+      Serial.print(testWord);
+      Serial.println(">");
+    } 
+  }  
 }
 
 
 
 // Function to remove limiters from serial message
 void receiveSerialData() {
-  static boolean recvInProgress = false;
-  static byte ndx = 0;
-  static char startMarker = '<';
-  static char endMarker = '>';
-  char rc;
-
+  
   while (Serial.available() > 0 && newData == false) {
     rc = Serial.read();
 
