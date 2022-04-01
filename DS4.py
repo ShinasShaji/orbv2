@@ -12,7 +12,6 @@ from helperScripts.Arduino import Arduino
 class DS4(Controller):
     def __init__(self, **kwargs):
         Controller.__init__(self, **kwargs)
-        self.INTERVAL = 0.01
         self.MAXVALUE = 32767
         
         self.currentTime = time.perf_counter()
@@ -229,7 +228,7 @@ class DS4(Controller):
             self.arduino = Arduino()
             self.arduino.attemptConnection()
             self.prevTxTime = self.currentTime
-            self.txInterval = 0.1
+            self.txInterval = 0.2
 
             self.servoState = None
             self.kinematicsState = None
