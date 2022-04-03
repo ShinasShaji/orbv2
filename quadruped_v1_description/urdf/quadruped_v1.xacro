@@ -1,0 +1,472 @@
+<?xml version="1.0" ?>
+<robot name="quadruped_v1" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find quadruped_v1_description)/urdf/materials.xacro" />
+<xacro:include filename="$(find quadruped_v1_description)/urdf/quadruped_v1.trans" />
+<xacro:include filename="$(find quadruped_v1_description)/urdf/quadruped_v1.gazebo" />
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.0009294833926678882 -0.00037967313639209924 -0.009224571071300017" rpy="0 0 0"/>
+    <mass value="7.794810015152198"/>
+    <inertia ixx="0.025672" iyy="0.135211" izz="0.143448" ixy="-0.0" iyz="0.0" ixz="-5.3e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LF_shoulder_1">
+  <inertial>
+    <origin xyz="0.02483325275447834 0.024789447484620697 -0.0012080260668229997" rpy="0 0 0"/>
+    <mass value="0.7519601881635327"/>
+    <inertia ixx="0.00093" iyy="0.000429" izz="0.00081" ixy="-0.000109" iyz="-0.000161" ixz="-6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.10802 -0.06462 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.10802 -0.06462 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RF_shoulder_1">
+  <inertial>
+    <origin xyz="0.024833248126540558 -0.024788764924502424 -0.0012080213003530487" rpy="0 0 0"/>
+    <mass value="0.7519609779146147"/>
+    <inertia ixx="0.00093" iyy="0.000429" izz="0.00081" ixy="0.000109" iyz="0.000161" ixz="-6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.10802 0.06538 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.10802 0.06538 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_shoulder_1">
+  <inertial>
+    <origin xyz="0.024833252754478008 0.024789447484619684 -0.0012080260668241585" rpy="0 0 0"/>
+    <mass value="0.7519601881634687"/>
+    <inertia ixx="0.00093" iyy="0.000429" izz="0.00081" ixy="-0.000109" iyz="-0.000161" ixz="-6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.16928 -0.06462 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.16928 -0.06462 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RR_shoulder_1">
+  <inertial>
+    <origin xyz="0.024833248126540225 -0.024788764924507434 -0.001208021300354498" rpy="0 0 0"/>
+    <mass value="0.7519609779144845"/>
+    <inertia ixx="0.00093" iyy="0.000429" izz="0.00081" ixy="0.000109" iyz="0.000161" ixz="-6e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.16928 0.06538 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.16928 0.06538 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_shoulder_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LF_upperleg_1">
+  <inertial>
+    <origin xyz="0.0010223181011697058 -0.021223360637379868 -0.06538783486980808" rpy="0 0 0"/>
+    <mass value="1.045848425660008"/>
+    <inertia ixx="0.003088" iyy="0.00296" izz="0.000565" ixy="1.3e-05" iyz="-3.3e-05" ixz="9.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.12892 -0.15632 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.12892 -0.15632 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RF_upperleg_1">
+  <inertial>
+    <origin xyz="0.001022441053695422 0.02122357549044593 -0.06538643121622952" rpy="0 0 0"/>
+    <mass value="1.0458654261286617"/>
+    <inertia ixx="0.003088" iyy="0.00296" izz="0.000565" ixy="-1.3e-05" iyz="3.3e-05" ixz="9.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.12892 0.15708 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.12892 0.15708 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_upperleg_1">
+  <inertial>
+    <origin xyz="0.0010223181013632177 -0.021223360637377675 -0.06538783486980783" rpy="0 0 0"/>
+    <mass value="1.0458484256599858"/>
+    <inertia ixx="0.003088" iyy="0.00296" izz="0.000565" ixy="1.3e-05" iyz="-3.3e-05" ixz="9.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.14838 -0.15632 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.14838 -0.15632 -0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RR_upperleg_1">
+  <inertial>
+    <origin xyz="0.0010224410524747873 0.02122357549044601 -0.06538643121622542" rpy="0 0 0"/>
+    <mass value="1.0458654261285834"/>
+    <inertia ixx="0.003088" iyy="0.00296" izz="0.000565" ixy="-1.3e-05" iyz="3.3e-05" ixz="9.7e-05"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.14838 0.15708 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.14838 0.15708 0.0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_upperleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LF_lowerleg_1">
+  <inertial>
+    <origin xyz="0.007423379105765487 -0.023814607088845835 -0.05629045075261249" rpy="0 0 0"/>
+    <mass value="0.9239456915759342"/>
+    <inertia ixx="0.002276" iyy="0.002318" izz="0.000258" ixy="4e-06" iyz="-1.5e-05" ixz="0.000203"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.14892 -0.16447 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.14892 -0.16447 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_lowerleg_1">
+  <inertial>
+    <origin xyz="0.007423379105764752 -0.02381460708884625 -0.05629045075261174" rpy="0 0 0"/>
+    <mass value="0.9239456915759341"/>
+    <inertia ixx="0.002276" iyy="0.002318" izz="0.000258" ixy="4e-06" iyz="-1.5e-05" ixz="0.000203"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.12838 -0.16447 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.12838 -0.16447 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RF_lowerleg_1">
+  <inertial>
+    <origin xyz="0.007423386530831355 0.023815254672673647 -0.056290417215945465" rpy="0 0 0"/>
+    <mass value="0.9239462460778405"/>
+    <inertia ixx="0.002276" iyy="0.002318" izz="0.000258" ixy="-4e-06" iyz="1.5e-05" ixz="0.000203"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.14892 0.16523 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.14892 0.16523 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RR_lowerleg_1">
+  <inertial>
+    <origin xyz="0.007423386530831411 0.023815254672673536 -0.056290417215945604" rpy="0 0 0"/>
+    <mass value="0.923946246077838"/>
+    <inertia ixx="0.002276" iyy="0.002318" izz="0.000258" ixy="-4e-06" iyz="1.5e-05" ixz="0.000203"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.12838 0.16523 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.12838 0.16523 0.148661" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_lowerleg_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LF_foot_1">
+  <inertial>
+    <origin xyz="-0.002911403247279648 3.6029963587647096e-07 -0.011457957425473786" rpy="0 0 0"/>
+    <mass value="0.1756582411083546"/>
+    <inertia ixx="2.2e-05" iyy="2.5e-05" izz="3.1e-05" ixy="0.0" iyz="-0.0" ixz="3e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.159355 -0.14017 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.159355 -0.14017 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LF_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="LR_foot_1">
+  <inertial>
+    <origin xyz="-0.0029114032472808 3.615420111069412e-07 -0.01145795742547262" rpy="0 0 0"/>
+    <mass value="0.17565824110835862"/>
+    <inertia ixx="2.2e-05" iyy="2.5e-05" izz="3.1e-05" ixy="0.0" iyz="-0.0" ixz="3e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.117945 -0.14017 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.117945 -0.14017 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/LR_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RF_foot_1">
+  <inertial>
+    <origin xyz="-0.0032084189234554417 2.0306800604941166e-07 -0.011378424728472003" rpy="0 0 0"/>
+    <mass value="0.1756662012295613"/>
+    <inertia ixx="2.2e-05" iyy="2.5e-05" izz="3.1e-05" ixy="-0.0" iyz="-0.0" ixz="3e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.159355 0.14093 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.159355 0.14093 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RF_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="RR_foot_1">
+  <inertial>
+    <origin xyz="-0.003208418923460868 2.0306800663227875e-07 -0.011378424728471781" rpy="0 0 0"/>
+    <mass value="0.17566620122954713"/>
+    <inertia ixx="2.2e-05" iyy="2.5e-05" izz="3.1e-05" ixy="-0.0" iyz="-0.0" ixz="3e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.117945 0.14093 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.117945 0.14093 0.291731" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://quadruped_v1_description/meshes/RR_foot_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="LF_hip" type="continuous">
+  <origin xyz="0.10802 0.06462 0.0" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="LF_shoulder_1"/>
+  <axis xyz="1.0 0.0 0.0"/>
+</joint>
+
+<joint name="RF_hip" type="continuous">
+  <origin xyz="0.10802 -0.06538 0.0" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="RF_shoulder_1"/>
+  <axis xyz="-1.0 -0.0 -0.0"/>
+</joint>
+
+<joint name="LR_hip" type="continuous">
+  <origin xyz="-0.16928 0.06462 0.0" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="LR_shoulder_1"/>
+  <axis xyz="1.0 0.0 0.0"/>
+</joint>
+
+<joint name="RR_hip" type="continuous">
+  <origin xyz="-0.16928 -0.06538 0.0" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="RR_shoulder_1"/>
+  <axis xyz="-1.0 -0.0 -0.0"/>
+</joint>
+
+<joint name="LF_shoulder" type="continuous">
+  <origin xyz="0.0209 0.0917 0.0" rpy="0 0 0"/>
+  <parent link="LF_shoulder_1"/>
+  <child link="LF_upperleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="RF_shoulder" type="continuous">
+  <origin xyz="0.0209 -0.0917 0.0" rpy="0 0 0"/>
+  <parent link="RF_shoulder_1"/>
+  <child link="RF_upperleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="LR_shoulder" type="continuous">
+  <origin xyz="0.0209 0.0917 0.0" rpy="0 0 0"/>
+  <parent link="LR_shoulder_1"/>
+  <child link="LR_upperleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="RR_shoulder" type="continuous">
+  <origin xyz="0.0209 -0.0917 0.0" rpy="0 0 0"/>
+  <parent link="RR_shoulder_1"/>
+  <child link="RR_upperleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="LF_elbow" type="continuous">
+  <origin xyz="0.02 0.00815 -0.148661" rpy="0 0 0"/>
+  <parent link="LF_upperleg_1"/>
+  <child link="LF_lowerleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="LR_elbow" type="continuous">
+  <origin xyz="0.02 0.00815 -0.148661" rpy="0 0 0"/>
+  <parent link="LR_upperleg_1"/>
+  <child link="LR_lowerleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="RF_elbow" type="continuous">
+  <origin xyz="0.02 -0.00815 -0.148661" rpy="0 0 0"/>
+  <parent link="RF_upperleg_1"/>
+  <child link="RF_lowerleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="RR_elbow" type="continuous">
+  <origin xyz="0.02 -0.00815 -0.148661" rpy="0 0 0"/>
+  <parent link="RR_upperleg_1"/>
+  <child link="RR_lowerleg_1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+
+<joint name="LF_foot" type="fixed">
+  <origin xyz="0.010435 -0.0243 -0.14307" rpy="0 0 0"/>
+  <parent link="LF_lowerleg_1"/>
+  <child link="LF_foot_1"/>
+</joint>
+
+<joint name="LR_foot" type="fixed">
+  <origin xyz="0.010435 -0.0243 -0.14307" rpy="0 0 0"/>
+  <parent link="LR_lowerleg_1"/>
+  <child link="LR_foot_1"/>
+</joint>
+
+<joint name="RF_foot" type="fixed">
+  <origin xyz="0.010435 0.0243 -0.14307" rpy="0 0 0"/>
+  <parent link="RF_lowerleg_1"/>
+  <child link="RF_foot_1"/>
+</joint>
+
+<joint name="RR_foot" type="fixed">
+  <origin xyz="0.010435 0.0243 -0.14307" rpy="0 0 0"/>
+  <parent link="RR_lowerleg_1"/>
+  <child link="RR_foot_1"/>
+</joint>
+
+</robot>
