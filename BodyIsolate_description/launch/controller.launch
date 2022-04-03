@@ -1,9 +1,0 @@
-<launch>
-
-<rosparam file="$(find BodyIsolate_description)/launch/controller.yaml" command="load"/>
-<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="BodyIsolate" args="LF_hip_position_controller RF_hip_position_controller LR_hip_position_controller RR_hip_position_controller LF_shoulder_position_controller RF_shoulder_position_controller RR_shoulder_position_controller LR_shoulder_position_controller LF_elbow_position_controller RF_elbow_position_controller RR_elbow_position_controller LR_elbow_position_controller joint_state_controller "/>
-<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
-  <remap from="/joint_states" to="/BodyIsolate/joint_states"/>
-</node>
-
-</launch>
