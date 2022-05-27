@@ -15,7 +15,7 @@ class Arduino:
     arduino = None
     baudrate = 115200
     connected = None
-    timeout = 10
+    timeout = 15
     interval = 0.5
 
     testWord = "ping"
@@ -25,7 +25,7 @@ class Arduino:
     # Use different port name list for connection based on platform
     # Linux
     if os.name == "posix":
-        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2"]
+        ports = ["/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyACM2", "/dev/ttyACM3"]
     # Windows
     elif os.name == "nt":
         ports = ["COM8", "COM6"]
@@ -49,6 +49,8 @@ class Arduino:
         try:
             self.arduino.open()
             self.arduino.flushInput()
+            
+            time.sleep(5)
 
             while not self.connected:
                 self.writeToSerial(self.testWord)

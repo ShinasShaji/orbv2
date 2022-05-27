@@ -32,6 +32,7 @@ char receivedChars[numChars];
 boolean newData = false;
 boolean serialConnected = false;
 char testWord[] = "ping";
+unsigned int pingInterval = 500;
 
 
 // Controller state
@@ -47,21 +48,29 @@ int legIndexOffset = 3*currentLeg;
 
 // Servo variables
 // Expands array as required
-#define LEGS 1
-#define SERVOS 6
+#define LEGS 4
+#define SERVOS 12
 
 Servo joints[SERVOS];
-int servoPins[SERVOS] = {5, 3,  6,
-                         9, 10, 11};
+int servoPins[SERVOS] = { 2,  3,  4,
+                          1,  1,  1,
+                          1,  1,  1,
+                          1,  1,  1};
 // Initially set to positions specified below
-float servoStates[SERVOS] = {115, 90, 15,      // Hip, shoulder, knee
-                             40,  70, 162};
+float servoStates[SERVOS] = { 70, 128,  35,      // Hip, shoulder, knee
+                             140,  48, 180,
+                              90, 115,  18,
+                              90,  55, 146};
 float prevServoStates[SERVOS];
-// Range of movement = {60, 90, 135} degrees for {hip, shoulder, knee}
-int maxServoStates[SERVOS] = {75, 0,   150,  
-                              0,  160, 27};  
-int minServoStates[SERVOS] = {135, 90, 15,
-                              60,  70, 162};
+// Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
+int maxServoStates[SERVOS] = {100,  38, 155,  
+                              102, 138,  60,
+                              130,  25, 138,
+                               50, 145,  26};  
+int minServoStates[SERVOS] = { 40, 128,  35,
+                              162,  48, 180,
+                               70, 115,  18,
+                              110,  55, 146};
 // Max swing rate in degrees per second
 float maxSwingRate = 90;
 // Flags
@@ -69,19 +78,27 @@ boolean jointLimitsViolated = false;
 
 
 // Leg endpoint position; each leg has own reference
-float legEndpointPosition[3*(LEGS+1)] = {100, 200, 75,  // mm; {back, down, outer}
-                                         100, 200, 75};
-float prevLegEndpointPosition[3*(LEGS+1)];
+float legEndpointPosition[3*(LEGS)] = {100, 200, 75,  // mm; {back, down, outer}
+                                       100, 200, 75,
+                                       100, 200, 75,
+                                       100, 200, 75};
+float prevLegEndpointPosition[3*(LEGS)];
 float maxEndpointVelocity = 50; // mm/s
 
 
 // Leg angle parameters
 float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
+                           0, 0, 0,
+                           0, 0, 0,     // {Hip, shoulder, knee}
                            0, 0, 0};         
 float minLegAngles[SERVOS] = {-20, 0, 30,
+                              -20, 0, 30,
+                              -20, 0, 30,
                               -20, 0, 30};
-float maxLegAngles[SERVOS] = {40, 90, 165,
-                              40, 90, 165};
+float maxLegAngles[SERVOS] = {40, 90, 150,
+                              40, 90, 150,
+                              40, 90, 150,
+                              40, 90, 150};
 
 
 // Effective and corrected parameters
@@ -207,12 +224,12 @@ void loop() {
 
 // Function to establish connection through serial
 void establishSerialConnection() {
-  // Starting serial
-  Serial.begin(BAUDRATE);
-
-  while (!serialConnected) {
-    receiveSerialData();
+  Serial.begin(115200);
   
+  while (!serialConnected) {
+    
+    receiveSerialData();
+    
     if (newData) {
       newData = false;
       
@@ -230,12 +247,15 @@ void establishSerialConnection() {
       Serial.print(testWord);
       Serial.println(">");
     }
-
+   
     else {
-      delay(200);
-    }    
-    
-  }
+      delay(pingInterval);
+      
+      Serial.print("<");
+      Serial.print(testWord);
+      Serial.println(">");
+    } 
+  }  
 }
 
 
@@ -312,7 +332,7 @@ void checkLegChange(){
     legChange = true;
     currentLeg = currentLeg + 1;
     
-    if (currentLeg > LEGS) {
+    if (currentLeg > (LEGS - 1)) {
       currentLeg = 0;
     }
 
@@ -499,7 +519,7 @@ void updatePrevServoStates() {
 
 // Function to update previous leg endpoint position array
 void updatePrevLegEndpointPosition() {
-  for (int i = 0; i < (3*(LEGS+1)); i++) {
+  for (int i = 0; i < (3*LEGS); i++) {
     prevLegEndpointPosition[i] = legEndpointPosition[i];
   }
 }
@@ -515,7 +535,7 @@ void restorePrevServoStates() {
 
 // Restore leg endpoint position from previous
 void restorePrevLegEndpointPosition() {
-  for (int i = 0; i < (3*(LEGS+1)); i++) {
+  for (int i = 0; i < (3*LEGS); i++) {
     legEndpointPosition[i] = prevLegEndpointPosition[i];
   }
 }

@@ -15,6 +15,7 @@ class DS4(Controller):
         self.MAXVALUE = 32767
         
         self.currentTime = time.perf_counter()
+        
         self.exitFlag = False
 
         # Print control state on change
@@ -228,7 +229,7 @@ class DS4(Controller):
             self.arduino = Arduino()
             self.arduino.attemptConnection()
             self.prevTxTime = self.currentTime
-            self.txInterval = 0.2
+            self.txInterval = 0.1                                         
 
             self.servoState = None
             self.kinematicsState = None
