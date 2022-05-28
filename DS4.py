@@ -22,7 +22,7 @@ class DS4(Controller):
         self.verbose = True
 
         # State array; L3(x2), R3(x2), L2, R2, Square
-        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0]
+        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0]
 
 
     # L3
@@ -100,6 +100,14 @@ class DS4(Controller):
         self.updateState("Square", value = 0)
 
 
+    def on_x_press(self):
+        self.updateState("Cross", value = 1)
+
+    
+    def on_x_release(self):
+        self.updateState("Cross", value = 0)
+
+
     def on_options_press(self):
         """Exit on options press"""
         self.exitFlag = True
@@ -146,6 +154,11 @@ class DS4(Controller):
 
             self.printState("Square")
 
+        elif control == "Cross":
+            self.state[7] = value
+
+            self.printState("Cross")
+
 
     def printState(self, control):
         """Print controller state"""  
@@ -161,6 +174,9 @@ class DS4(Controller):
 
             elif control == "Square":
                 print("Square", self.state[6])
+
+            elif control == "Cross":
+                print("Cross", self.state[7])
 
 
     def extractStates(self, message):
@@ -195,11 +211,11 @@ class DS4(Controller):
             timeElapsed = self.currentTime - self.prevTxTime
 
             if timeElapsed > self.txInterval:
-                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
+                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
                         self.state[0], self.state[1], \
                         self.state[2], self.state[3], \
                         self.state[4], self.state[5], \
-                        self.state[6])
+                        self.state[6], self.state[7])
 
                 self.arduino.writeToSerial(content)
 

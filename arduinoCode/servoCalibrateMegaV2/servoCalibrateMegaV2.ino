@@ -39,15 +39,15 @@ float servoAngles[SERVOS] = {0, 30, 0,    // Hip, shoulder, knee
 
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
   
-int minServoStates[SERVOS] = {1125, 500, 800,
-                              1000, 1000, 1000,
-                              1175, 1825,  925,
-                              1835,  915, 1725};
+int minServoStates[SERVOS] = {1125, 1845,  775,
+                              1795,  780, 2235,
+                              1175, 1825,  900,
+                              1835,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1785, 2500, 1825,  
-                              2000, 2000, 2000,
-                              1825,  950, 1815,
-                              1165, 1925, 780};
+int maxServoStates[SERVOS] = {1785,  840, 1800,  
+                              1165, 1745, 1250,
+                              1825,  950, 1790,
+                              1165, 1925,  805};
                               
 int jointRanges[SERVOS] = {60, 90, 90,
                            60, 90, 90,
