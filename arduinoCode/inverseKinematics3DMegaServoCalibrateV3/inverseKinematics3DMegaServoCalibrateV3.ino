@@ -4,6 +4,7 @@
 
 #include <Servo.h>
 #include <math.h>
+#include <avr/wdt.h>
 
 
 // Leg length parameters
@@ -15,14 +16,10 @@ float legLengths[4] = {70,      // mm; length from hip to shoulder
 // Note that the parameters above are currently inaccurate
 
 
-// Timing
+// Timing variables
 unsigned int currentTime = 0;               // ms
 unsigned int prevKinematic = 0;             // ms
 unsigned int kinematicsRefreshTime = 20;    // ms
-
-
-// Flags
-bool verboseDebug = false;
 
 
 // Serial recieve variables
@@ -37,11 +34,11 @@ unsigned int pingInterval = 500;
 
 // Controller state
 // Number of independent controller state variables
-#define STATES 8
-#define MIDSTATE 10
+#define STATES 9
+#define MIDSTATE 50
 
 // L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {10, 10, 10, 10, 0, 0, 0, 0};
+int controller[STATES];
 int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
@@ -61,17 +58,11 @@ int servoPins[SERVOS] = {13, 12, 11,
                           4,  3,  2};
 
 // Initially set to positions specified below
-float servoStates[SERVOS] = {1500, 1500, 1500,    // Hip, shoulder, knee
-                             1500, 1500, 1500,
-                             1500, 1500, 1500,
-                             1500, 1500, 1500};
+float servoStates[SERVOS];
                              
 float prevServoStates[SERVOS];
 
-float servoAngles[SERVOS] = {0, 30, 0,    // Hip, shoulder, knee
-                             0, 30, 0,
-                             0, 30, 0,
-                             0, 30, 0};
+float servoAngles[SERVOS];
 
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
   
@@ -97,23 +88,25 @@ boolean jointLimitsViolated = false;
 
 
 // Leg endpoint position; each leg has own reference
-float legEndpointPosition[3*(LEGS)] = {000, 125, 75,  // mm; {back, down, outer}
-                                       000, 125, 75,
-                                       000, 125, 75,
-                                       000, 125, 75};
+float legEndpointPosition[3*(LEGS)];
+
 float prevLegEndpointPosition[3*(LEGS)];
 float maxEndpointVelocity = 100; // mm/s
 
+// Setting leg endpoint limits
+float maxLegEndpointPosition[3] = {150, 250, 120};
+
+float minLegEndpointPosition[3] = {-50, 125,  50};
+
 
 // Leg angle parameters
-float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
-                           0, 0, 0,
-                           0, 0, 0,     // {Hip, shoulder, knee}
-                           0, 0, 0};         
+float legAngles[SERVOS];
+
 float minLegAngles[SERVOS] = {-20, 15, 30,
                               -20, 15, 30,
                               -20, 15, 30,
                               -20, 15, 30};
+                              
 float maxLegAngles[SERVOS] = {40, 105, 120,
                               40, 105, 120,
                               40, 105, 120,
@@ -134,8 +127,53 @@ float sinKneeAngleSupplementary = 0;
 float shoulderAngleSupplementary = 0;
 
 
+// Function to initialize all variables
+void initializeVariables() {
+  // Flags
+  boolean newData = false;
+  boolean serialConnected = false;
+  
+  boolean globalLegControl = false;
+  
+  boolean jointLimitsViolated = false;
 
+  // Controller variables
+  int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
+  int currentLeg = 0;
+  int legIndex = 0;
+  int legIndexOffset = 0;
+
+  // Initially set servos to positions specified below
+  float servoStates[SERVOS] = {1500, 1500, 1500,    // Hip, shoulder, knee
+                               1500, 1500, 1500,
+                               1500, 1500, 1500,
+                               1500, 1500, 1500};
+                               
+  float servoAngles[SERVOS] = {0, 30, 0,    // Hip, shoulder, knee
+                               0, 30, 0,
+                               0, 30, 0,
+                               0, 30, 0};
+                             
+  // Leg endpoint positions; each leg has own reference
+  float legEndpointPosition[3*(LEGS)] = {000, 125, 75,  // mm; {back, down, outer}
+                                         000, 125, 75,
+                                         000, 125, 75,
+                                         000, 125, 75};
+                                       
+  // Leg angle parameters
+  float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
+                             0, 0, 0,
+                             0, 0, 0,     // {Hip, shoulder, knee}
+                             0, 0, 0};         
+}
+
+
+
+// Setup function
 void setup() {
+  // Initializing variables
+  initializeVariables();
+  
   // Establishing connection through serial
   establishSerialConnection();
   
@@ -166,6 +204,7 @@ void loop() {
     extractControllerState();
     checkLegChange();
     checkGlobalLegControl();
+    checkReset();
     // Write servo and kinematics states to serial
     writeStatesSerial();
   } 
@@ -225,7 +264,19 @@ void attachServoPins() {
     joints[servo].attach(servoPins[servo]);
   
     // Delay before continuing
-    delay(100);
+    delay(25);
+  }
+}
+
+
+//Function to detach pins from corresponding servos
+void detachServoPins() {
+  for (int servo = 0; servo < SERVOS; servo ++){  
+    // Detach pins from the corresponding servo
+    joints[servo].detach();
+  
+    // Delay before continuing
+    delay(25);
   }
 }
 
@@ -322,6 +373,19 @@ void checkGlobalLegControl(){
 }
 
 
+// Function to detach servos and reset
+void checkReset() {
+  if (controller[8]==1) {
+    detachServoPins();
+    wdt_enable(WDTO_250MS);
+    
+    while (true){
+      // hahahahahaha
+    }
+  }
+}
+
+
 // Function to update leg endpoint position based on controller input
 void updateLegEndpointPosition() {
   if (globalLegControl) {
@@ -345,6 +409,20 @@ void updateLegEndpointPosition() {
             maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
     legEndpointPosition[legIndexOffset+2] = legEndpointPosition[legIndexOffset+2] + 
             maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
+  }
+  
+  // Limiting leg endpoint locations
+  for (legIndex = 0; legIndex < LEGS; legIndex++) {
+    legIndexOffset = legIndex * 3;
+    
+    for (int dim = 0; dim < 3; dim++) {
+      if (legEndpointPosition[legIndexOffset+dim] > maxLegEndpointPosition[dim]) {
+        legEndpointPosition[legIndexOffset+dim] = maxLegEndpointPosition[dim];
+      }
+      else if (legEndpointPosition[legIndexOffset+dim] < minLegEndpointPosition[dim]) {
+        legEndpointPosition[legIndexOffset+dim] = minLegEndpointPosition[dim];
+      }
+    }
   }
 }
 

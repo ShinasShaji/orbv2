@@ -13,6 +13,7 @@ class DS4(Controller):
     def __init__(self, **kwargs):
         Controller.__init__(self, **kwargs)
         self.MAXVALUE = 32767
+        self.SCALEDMIDVALUE = 50.0
         
         self.currentTime = time.perf_counter()
         
@@ -22,7 +23,9 @@ class DS4(Controller):
         self.verbose = True
 
         # State array; L3(x2), R3(x2), L2, R2, Square
-        self.state = [10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0]
+        self.state = [self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
+                      self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
+                      0.0, 0.0, 0.0, 0.0, 0.0]
 
 
     # L3
@@ -110,9 +113,11 @@ class DS4(Controller):
 
     def on_options_press(self):
         """Exit on options press"""
+        self.updateState("Options", value = 1)
+
+        time.sleep(self.txInterval)
         self.exitFlag = True
 
-        time.sleep(0.1)
         exit()
 
 
@@ -120,7 +125,7 @@ class DS4(Controller):
     def updateState(self, control, direction=None, value=None):
         """Update state with current values"""
         if control == "L3":
-            value = value * 10
+            value = value * self.SCALEDMIDVALUE
 
             if direction in ["up", "down"]:
                 self.state[1] = value/self.MAXVALUE
@@ -130,7 +135,7 @@ class DS4(Controller):
             self.printState("L3")
 
         elif control == "R3":
-            value = value * 10
+            value = value * self.SCALEDMIDVALUE
 
             if direction in ["up", "down"]:
                 self.state[3] = value/self.MAXVALUE
@@ -140,7 +145,7 @@ class DS4(Controller):
             self.printState("R3")
 
         elif control in ["L2", "R2"]:
-            value = value * 10
+            value = value * self.SCALEDMIDVALUE
 
             if control == "L2":
                 self.state[4] = value/(2*self.MAXVALUE)
@@ -158,6 +163,11 @@ class DS4(Controller):
             self.state[7] = value
 
             self.printState("Cross")
+
+        elif control == "Options":
+            self.state[8] = value
+
+            self.printState("Options")
 
 
     def printState(self, control):
@@ -177,6 +187,9 @@ class DS4(Controller):
 
             elif control == "Cross":
                 print("Cross", self.state[7])
+
+            elif control == "Options":
+                print("Options", self.state[8])
 
 
     def extractStates(self, message):
@@ -206,16 +219,17 @@ class DS4(Controller):
 
     def controllerSerial(self):
         """Writes current controller state to serial. Run as thread"""
-        while self.arduino.connected and not self.exitFlag:
+        while self.arduino.connected:
             self.currentTime = time.perf_counter()
             timeElapsed = self.currentTime - self.prevTxTime
 
             if timeElapsed > self.txInterval:
-                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
+                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
                         self.state[0], self.state[1], \
                         self.state[2], self.state[3], \
                         self.state[4], self.state[5], \
-                        self.state[6], self.state[7])
+                        self.state[6], self.state[7],
+                        self.state[8])
 
                 self.arduino.writeToSerial(content)
 
@@ -226,7 +240,8 @@ class DS4(Controller):
             else:
                 time.sleep(self.txInterval - timeElapsed)
 
-        self.arduino.closeConnection()
+            if self.exitFlag:
+                self.arduino.closeConnection()
 
 
     def setContext(self, context):
