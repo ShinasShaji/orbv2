@@ -37,8 +37,9 @@ unsigned int pingInterval = 500;
 #define STATES 9
 #define MIDSTATE 50
 
+// Controller variables
 // L3x2, R3x2, L2, R2, Square
-int controller[STATES];
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
 int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
@@ -57,24 +58,30 @@ int servoPins[SERVOS] = {13, 12, 11,
                           7,  6,  5,
                           4,  3,  2};
 
-// Initially set to positions specified below
-float servoStates[SERVOS];
-                             
+// Initially set servos to positions specified below
+float servoStates[SERVOS] = {1500, 1500, 1500,    // Hip, shoulder, knee
+                             1500, 1500, 1500,
+                             1500, 1500, 1500,
+                             1500, 1500, 1500};
+                              
 float prevServoStates[SERVOS];
 
-float servoAngles[SERVOS];
+float servoAngles[SERVOS] = {20, 30, 0,    // Hip, shoulder, knee
+                             20, 30, 0,
+                             20, 30, 0,
+                             20, 30, 0};
 
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
-  
-int minServoStates[SERVOS] = {1125, 1845,  775,
-                              1795,  780, 2235,
+
+int minServoStates[SERVOS] = {1255, 1845,  775,
+                              1690,  780, 2235,
                               1175, 1825,  900,
-                              1835,  915, 1750};
+                              1725,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1785,  840, 1800,  
-                              1165, 1745, 1250,
+int maxServoStates[SERVOS] = {1915,  840, 1800,  
+                              1060, 1745, 1250,
                               1825,  950, 1790,
-                              1165, 1925,  805};
+                              1055, 1925,  805};
                               
 int jointRanges[SERVOS] = {60, 90, 90,
                            60, 90, 90,
@@ -87,8 +94,11 @@ float maxSwingRate = 90;
 boolean jointLimitsViolated = false;
 
 
-// Leg endpoint position; each leg has own reference
-float legEndpointPosition[3*(LEGS)];
+// Leg endpoint positions; each leg has own reference
+float legEndpointPosition[3*(LEGS)] = {000, 125, 70,  // mm; {back, down, outer}
+                                       000, 125, 70,
+                                       000, 125, 70,
+                                       000, 125, 70};
 
 float prevLegEndpointPosition[3*(LEGS)];
 float maxEndpointVelocity = 100; // mm/s
@@ -100,8 +110,10 @@ float minLegEndpointPosition[3] = {-50, 125,  50};
 
 
 // Leg angle parameters
-float legAngles[SERVOS];
-
+float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
+                           0, 0, 0,
+                           0, 0, 0,     // {Hip, shoulder, knee}
+                           0, 0, 0};      
 float minLegAngles[SERVOS] = {-20, 15, 30,
                               -20, 15, 30,
                               -20, 15, 30,
@@ -127,53 +139,9 @@ float sinKneeAngleSupplementary = 0;
 float shoulderAngleSupplementary = 0;
 
 
-// Function to initialize all variables
-void initializeVariables() {
-  // Flags
-  boolean newData = false;
-  boolean serialConnected = false;
-  
-  boolean globalLegControl = false;
-  
-  boolean jointLimitsViolated = false;
-
-  // Controller variables
-  int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
-  int currentLeg = 0;
-  int legIndex = 0;
-  int legIndexOffset = 0;
-
-  // Initially set servos to positions specified below
-  float servoStates[SERVOS] = {1500, 1500, 1500,    // Hip, shoulder, knee
-                               1500, 1500, 1500,
-                               1500, 1500, 1500,
-                               1500, 1500, 1500};
-                               
-  float servoAngles[SERVOS] = {0, 30, 0,    // Hip, shoulder, knee
-                               0, 30, 0,
-                               0, 30, 0,
-                               0, 30, 0};
-                             
-  // Leg endpoint positions; each leg has own reference
-  float legEndpointPosition[3*(LEGS)] = {000, 125, 75,  // mm; {back, down, outer}
-                                         000, 125, 75,
-                                         000, 125, 75,
-                                         000, 125, 75};
-                                       
-  // Leg angle parameters
-  float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
-                             0, 0, 0,
-                             0, 0, 0,     // {Hip, shoulder, knee}
-                             0, 0, 0};         
-}
-
-
 
 // Setup function
-void setup() {
-  // Initializing variables
-  initializeVariables();
-  
+void setup() { 
   // Establishing connection through serial
   establishSerialConnection();
   

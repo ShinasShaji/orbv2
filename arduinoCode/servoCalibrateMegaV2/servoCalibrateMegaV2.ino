@@ -3,6 +3,7 @@ Code to calibrate servos using a ds4 controller
 */
 
 #include <Servo.h>
+#include <avr/wdt.h>
 
 
 // Serial recieve variables
@@ -32,22 +33,22 @@ float servoStates[SERVOS] = {1500, 1500, 1500,    // Hip, shoulder, knee
                              1500, 1500, 1500,
                              1500, 1500, 1500};
                              
-float servoAngles[SERVOS] = {0, 30, 0,    // Hip, shoulder, knee
-                             0, 30, 0,
-                             0, 30, 0,
-                             0, 30, 0};
+float servoAngles[SERVOS] = {20, 30, 0,    // Hip, shoulder, knee
+                             20, 30, 0,
+                             20, 30, 0,
+                             20, 30, 0};
 
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
   
-int minServoStates[SERVOS] = {1125, 1845,  775,
-                              1795,  780, 2235,
+int minServoStates[SERVOS] = {1255, 1845,  775,
+                              1690,  780, 2235,
                               1175, 1825,  900,
-                              1835,  915, 1750};
+                              1725,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1785,  840, 1800,  
-                              1165, 1745, 1250,
+int maxServoStates[SERVOS] = {1915,  840, 1800,  
+                              1060, 1745, 1250,
                               1825,  950, 1790,
-                              1165, 1925,  805};
+                              1055, 1925,  805};
                               
 int jointRanges[SERVOS] = {60, 90, 90,
                            60, 90, 90,
@@ -62,13 +63,13 @@ unsigned int servoRefresh = 10;
 unsigned long prevServo = millis();
 
 
-// Controller state
-// Number of independent state variables
-#define STATES 7
-#define MIDSTATE 10
+             // Controller state
+// Number of independent controller state variables
+#define STATES 9
+#define MIDSTATE 50
 
 // L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {10, 10, 10, 10, 0, 0, 0};
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
 int currentLeg = 0;
 int legServoIndexOffset = 3*currentLeg;
 
@@ -105,6 +106,7 @@ void loop(){
     newData = false;
     extractControllerState();
     checkLegChange();
+    checkReset();
     writeServoStateSerial();
   }  
   
@@ -130,6 +132,18 @@ void attachServoPins() {
   
     // Delay before continuing
     delay(100);
+  }
+}
+
+
+//Function to detach pins from corresponding servos
+void detachServoPins() {
+  for (int servo = 0; servo < SERVOS; servo ++){  
+    // Detach pins from the corresponding servo
+    joints[servo].detach();
+  
+    // Delay before continuing
+    delay(25);
   }
 }
 
@@ -356,3 +370,17 @@ void checkLegChange() {
     legChange = false;
   }
 }
+
+
+// Function to detach servos and reset
+void checkReset() {
+  if (controller[8]==1) {
+    detachServoPins();
+    wdt_enable(WDTO_250MS);
+    
+    while (true){
+      // hahahahahaha
+    }
+  }
+}
+
