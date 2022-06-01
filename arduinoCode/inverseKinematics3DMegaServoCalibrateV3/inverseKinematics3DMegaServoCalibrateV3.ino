@@ -34,17 +34,28 @@ unsigned int pingInterval = 500;
 
 // Controller state
 // Number of independent controller state variables
-#define STATES 9
+#define STATES 10
 #define MIDSTATE 50
 
 // Controller variables
 // L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0, 0};
 int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
 
+// Control states
 boolean globalLegControl = false;
+boolean stand = false;    // Stand if true, sit if false; if stand, IK enabled at setup()
+
+boolean transition = false;
+
+// Timing
+unsigned int transitionBeginTime = 0;
+unsigned int standTransitionTime = 10000; 
+
+// Transition interpolation
+float interpolationFraction = 0;
 
 
 // Servo variables
@@ -95,12 +106,15 @@ boolean jointLimitsViolated = false;
 
 
 // Leg endpoint positions; each leg has own reference
-float legEndpointPosition[3*(LEGS)] = {000, 125, 70,  // mm; {back, down, outer}
-                                       000, 125, 70,
-                                       000, 125, 70,
-                                       000, 125, 70};
+float legEndpointPosition[3*(LEGS)];
 
 float prevLegEndpointPosition[3*(LEGS)];
+
+float legEndpointStandInit[3*(LEGS)] = {000, 125, 70,  // mm; {back, down, outer}
+                                        000, 125, 70,
+                                        000, 125, 70,
+                                        000, 125, 70};
+
 float maxEndpointVelocity = 100; // mm/s
 
 // Setting leg endpoint limits
@@ -112,7 +126,7 @@ float minLegEndpointPosition[3] = {-50, 125,  50};
 // Leg angle parameters
 float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
                            0, 0, 0,
-                           0, 0, 0,     // {Hip, shoulder, knee}
+                           0, 0, 0,   
                            0, 0, 0};      
 float minLegAngles[SERVOS] = {-20, 15, 30,
                               -20, 15, 30,
@@ -123,6 +137,15 @@ float maxLegAngles[SERVOS] = {40, 105, 120,
                               40, 105, 120,
                               40, 105, 120,
                               40, 105, 120};
+
+// Leg angles for sitting state                   
+float legAnglesSit[SERVOS] = {0, 45, 30,     // {Hip, shoulder, knee}
+                              0, 45, 30,
+                              0, 45, 30,
+                              0, 45, 30};
+
+// Leg angles at beginning of transition
+float transitionBeginAngles[SERVOS];
 
 
 // Effective and corrected parameters
@@ -145,12 +168,31 @@ void setup() {
   // Establishing connection through serial
   establishSerialConnection();
   
+  // Initializing leg endpoint position
+  setLegEndpointToStand();
+  
   // Scaling to kinematics time step
   maxEndpointVelocity = maxEndpointVelocity * kinematicsRefreshTime / 1000;
   
   // Initial evaluation of IK
   currentTime = millis();
-  evaluateInverseKinematics();
+  
+  // Differing initial position based on whether standing or sitting
+  if (stand) {
+    // Evaluate IK to initialize
+    evaluateInverseKinematics();
+    
+    // Map and write leg angles to servos
+    writeAnglesToServos();
+  }
+  
+  else if (!stand) {
+    // Setting leg angles to sitting position
+    setLegAnglesToSit();
+    
+    // Map and write leg angles to servos
+    writeAnglesToServos();
+  }
   
   // Setting up servos
   attachServoPins();
@@ -167,23 +209,74 @@ void loop() {
 
   // Recieve data from serial
   receiveSerialData();
+  
   if (newData){
     newData = false;
     extractControllerState();
+    
+    // Check for and update flags
+    checkReset();
+    checkStand();
     checkLegChange();
     checkGlobalLegControl();
-    checkReset();
+    
     // Write servo and kinematics states to serial
     writeStatesSerial();
-  } 
+  }
 
-  // IK loop
+  // Code below runs at kinematicsRefreshTime
   if ((currentTime - prevKinematic) >= kinematicsRefreshTime) {
-    
-    updateLegEndpointPosition();
-    evaluateInverseKinematics();
 
-  }  
+    // Transitioning to stand state
+    if ((stand)&&(transition)) {
+      if ((currentTime - transitionBeginTime) <= standTransitionTime) {
+        // Update legAngles to stand angles
+        setLegEndpointToStand();
+        evaluateInverseKinematics();
+
+        // Interpolate to stand
+        interpolateStand();
+
+        // Write interpolated leg angles to servos
+        writeAnglesToServos();
+      } else {
+        transition = false;
+      }
+    } 
+
+    // Stand IK loop
+    if ((stand)&&(!transition)) {
+    
+      // Update endpoint position with controller inputs
+      updateLegEndpointPosition();
+      // Evaluate leg angles
+      evaluateInverseKinematics();
+      // Write leg angles to servos
+      writeAnglesToServos();
+
+    }
+
+    // Transitioning to sit state
+    if ((!stand)&&(transition)) {
+      if ((currentTime - transitionBeginTime) <= standTransitionTime) {
+        // Update legAngles to stand angles
+        setLegAnglesToSit();
+
+        // Interpolate to sit
+        interpolateStand();
+
+        // Write interpolated leg angles to servos
+        writeAnglesToServos();
+      } else {
+        transition = false;
+      }
+    }
+
+    // Sit loop
+    if ((!stand)&&(!transition)) {
+      // Nothing to do here
+    }
+  } 
 }
 
 
@@ -249,40 +342,6 @@ void detachServoPins() {
 }
 
 
-// Function to remove limiters from serial message
-void receiveSerialData() {
-  static boolean recvInProgress = false;
-  static byte ndx = 0;
-  static char startMarker = '<';
-  static char endMarker = '>';
-  char rc;
-
-  while (Serial.available() > 0 && newData == false) {
-    rc = Serial.read();
-
-    if (recvInProgress == true) {
-      if (rc != endMarker) {
-        receivedChars[ndx] = rc;
-        ndx++;
-        if (ndx >= numChars) {
-          ndx = numChars - 1;
-        }
-      }
-      else {
-        receivedChars[ndx] = '\0'; // Terminate the string
-        recvInProgress = false;
-        ndx = 0;
-        newData = true;
-      }
-    }
-
-    else if (rc == startMarker) {
-      recvInProgress = true;
-    }
-  }
-}
-
-
 /* 
  * Function to extract controller values from serial message
  * on message start character
@@ -296,6 +355,35 @@ void extractControllerState(){
       controller[state] = atoi(token);
       
       token = strtok(NULL, " ");
+    }
+  }
+}
+
+
+// Set legEndpointPosition to stand position
+void setLegEndpointToStand() {
+  for (int dim = 0; dim < (3*LEGS); dim++) {
+    legEndpointPosition[dim] = legEndpointStandInit[dim];
+  }
+}
+
+
+// Set leg angles to the sit position
+void setLegAnglesToSit() {
+  for (int servo = 0; servo < SERVOS; servo++) {
+    legAngles[servo] = legAnglesSit[servo];
+  }
+}
+    
+
+// Function to detach servos and reset
+void checkReset() {
+  if (controller[9]==1) {
+    detachServoPins();
+    wdt_enable(WDTO_250MS);
+    
+    while (true){
+      // hahahahahaha
     }
   }
 }
@@ -320,7 +408,7 @@ void checkLegChange(){
 }
 
 
-// Function for checking for global leg control
+// Function to check for global leg control
 void checkGlobalLegControl(){  
   static boolean globalLegControlChange = false;
 
@@ -341,15 +429,64 @@ void checkGlobalLegControl(){
 }
 
 
-// Function to detach servos and reset
-void checkReset() {
-  if (controller[8]==1) {
-    detachServoPins();
-    wdt_enable(WDTO_250MS);
+// Function to check for stand/sit
+void checkStand() {
+  static boolean standChange = false;
+  
+  if ((controller[8]==1)&&(standChange==false)){
+    standChange = true;
     
-    while (true){
-      // hahahahahaha
+    if (stand) {
+      stand = false;
+      transition = true;
+      transitionBeginTime = currentTime;
+
+      // Copy angles at beginning of transition
+      updateTransitionBeginAngles();
+
+      // Set legAngles to sit angles
+      setLegAnglesToSit();
+      // Reinitialize leg endpoint to standing position
+      setLegEndpointToStand();
     }
+    else {
+      stand = true;
+      transition = true;
+      transitionBeginTime = currentTime;
+
+      // Copy angles at beginning of transition
+      updateTransitionBeginAngles();
+
+      // Set leg endpoint to stand position
+      setLegEndpointToStand();
+    }
+  }
+  
+  else if ((controller[8]==0)&&(standChange==true)){
+    standChange = false;
+  } 
+}
+
+
+// Function to copy angles at transition beginning
+void updateTransitionBeginAngles() {
+  for (int servo = 0; servo < SERVOS; servo ++) {
+    transitionBeginAngles[servo] = legAngles[servo];
+  }
+}
+
+
+// Function to interpolate for stand transition
+void interpolateStand() {
+  // Interpolation fraction
+  interpolationFraction = float(currentTime - transitionBeginTime) / 
+                          float(standTransitionTime);
+
+  // Interpolate from transition beginning to end leg angles
+  for (int servo = 0; servo < SERVOS; servo ++) {
+    legAngles[servo] = transitionBeginAngles[servo] + 
+                     ((legAngles[servo] - transitionBeginAngles[servo]) * 
+                       interpolationFraction); 
   }
 }
 
@@ -476,65 +613,14 @@ void writeStatesToServos(){
 }
 
 
-// Function to write states to serial
-void writeStatesSerial() {
-  static boolean writeServo = true;
-  static boolean writeLegAngles = true;
-  static boolean writeServoAngles = true;
-  static boolean writeKinematics = true;
-  
-  legIndexOffset = 3 * currentLeg;
-
-  Serial.print("<");
-  
-  if (globalLegControl) {
-    Serial.print("global ");
-  }
-
-  if (writeServo) {
-    Serial.print("s ");
-    Serial.print(int(currentLeg));
-  
-    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
-      Serial.print(" ");
-      Serial.print(int(servoStates[servo]));
-    }
-    Serial.print(" | ");
-  }
-  
-  if (writeLegAngles) {
-    Serial.print("l ");
-    Serial.print(int(currentLeg));
-  
-    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
-      Serial.print(" ");
-      Serial.print(int(legAngles[servo]));
-    }
-    Serial.print(" | ");
-  }
-  
-  if (writeServoAngles) {
-    Serial.print("a ");
-    Serial.print(int(currentLeg));
-  
-    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
-      Serial.print(" ");
-      Serial.print(int(servoAngles[servo]));
-    }
-    Serial.print(" | ");
-  }
-
-  if (writeKinematics) {
-    Serial.print("k ");
-    Serial.print(int(currentLeg));
-
-    for (int dim = legIndexOffset; dim < (legIndexOffset+3); dim++) {
-      Serial.print(" ");
-      Serial.print(int(legEndpointPosition[dim]));
-    }
-  }
-
-  Serial.println(">");
+// Function to map leg angles and write as servo microseconds
+void writeAnglesToServos() {
+  // Map leg angles to servoStates
+  mapAnglesToServoAngles();
+  updateServoStates();
+    
+  // Update and write computed servo positions
+  writeStatesToServos();
 }
 
 
@@ -628,13 +714,120 @@ void evaluateInverseKinematics(){
   /*
    * IK algorithm end
    */
-   
-  // The following run at the same rate as IK, no reason to run faster
+     
+  // Map and write leg angles to servos
+  writeAnglesToServos();
+  
+}
 
-  // Map IK results to servoStates
-  mapAnglesToServoAngles();
-  updateServoStates();
-    
-  // Update and write computed servo positions
-  writeStatesToServos();
+
+// Function to remove limiters from serial message
+void receiveSerialData() {
+  static boolean recvInProgress = false;
+  static byte ndx = 0;
+  static char startMarker = '<';
+  static char endMarker = '>';
+  char rc;
+
+  while (Serial.available() > 0 && newData == false) {
+    rc = Serial.read();
+
+    if (recvInProgress == true) {
+      if (rc != endMarker) {
+        receivedChars[ndx] = rc;
+        ndx++;
+        if (ndx >= numChars) {
+          ndx = numChars - 1;
+        }
+      }
+      else {
+        receivedChars[ndx] = '\0'; // Terminate the string
+        recvInProgress = false;
+        ndx = 0;
+        newData = true;
+      }
+    }
+
+    else if (rc == startMarker) {
+      recvInProgress = true;
+    }
+  }
+}
+
+
+// Function to write states to serial
+void writeStatesSerial() {
+  static boolean writeServo = true;
+  static boolean writeLegAngles = true;
+  static boolean writeServoAngles = true;
+  static boolean writeKinematics = true;
+  static boolean writeStates = true;
+  
+  legIndexOffset = 3 * currentLeg;
+
+  Serial.print("<");
+
+  if (writeServo) {
+    Serial.print("s ");
+    Serial.print(int(currentLeg));
+  
+    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
+      Serial.print(" ");
+      Serial.print(int(servoStates[servo]));
+    }
+    Serial.print(" | ");
+  }
+  
+  if (writeLegAngles) {
+    Serial.print("l ");
+    Serial.print(int(currentLeg));
+  
+    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
+      Serial.print(" ");
+      Serial.print(int(legAngles[servo]));
+    }
+    Serial.print(" | ");
+  }
+  
+  if (writeServoAngles) {
+    Serial.print("a ");
+    Serial.print(int(currentLeg));
+  
+    for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
+      Serial.print(" ");
+      Serial.print(int(servoAngles[servo]));
+    }
+    Serial.print(" | ");
+  }
+
+  if (writeKinematics) {
+    Serial.print("k ");
+    Serial.print(int(currentLeg));
+
+    for (int dim = legIndexOffset; dim < (legIndexOffset+3); dim++) {
+      Serial.print(" ");
+      Serial.print(int(legEndpointPosition[dim]));
+    }
+    Serial.print(" | ");
+  }
+
+  if (globalLegControl) {
+    Serial.print("global ");
+  }
+  
+  if (writeStates) {
+    if (stand) {
+      Serial.print("stand ");
+    }
+    else {
+      Serial.print("sit ");
+    }
+
+    if (transition) {
+      Serial.print("transition ");
+      Serial.print(interpolationFraction);
+    }
+  }
+
+  Serial.println(">");
 }

@@ -25,7 +25,7 @@ class DS4(Controller):
         # State array; L3(x2), R3(x2), L2, R2, Square
         self.state = [self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
                       self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
-                      0.0, 0.0, 0.0, 0.0, 0.0]
+                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
     # L3
@@ -111,6 +111,14 @@ class DS4(Controller):
         self.updateState("Cross", value = 0)
 
 
+    def on_triangle_press(self):
+        self.updateState("Triangle", value = 1)
+
+    
+    def on_triangle_release(self):
+        self.updateState("Triangle", value = 0)
+
+
     def on_options_press(self):
         """Exit on options press"""
         self.updateState("Options", value = 1)
@@ -164,8 +172,13 @@ class DS4(Controller):
 
             self.printState("Cross")
 
-        elif control == "Options":
+        elif control == "Triangle":
             self.state[8] = value
+
+            self.printState("Triangle")
+
+        elif control == "Options":
+            self.state[9] = value
 
             self.printState("Options")
 
@@ -188,8 +201,11 @@ class DS4(Controller):
             elif control == "Cross":
                 print("Cross", self.state[7])
 
+            elif control == "Triangle":
+                print("Triangle", self.state[8])
+
             elif control == "Options":
-                print("Options", self.state[8])
+                print("Options", self.state[9])
 
 
     def extractStates(self, message):
@@ -224,12 +240,12 @@ class DS4(Controller):
             timeElapsed = self.currentTime - self.prevTxTime
 
             if timeElapsed > self.txInterval:
-                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
+                content = "d {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}".format(\
                         self.state[0], self.state[1], \
                         self.state[2], self.state[3], \
                         self.state[4], self.state[5], \
                         self.state[6], self.state[7],
-                        self.state[8])
+                        self.state[8], self.state[9])
 
                 self.arduino.writeToSerial(content)
 
