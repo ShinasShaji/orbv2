@@ -110,6 +110,8 @@ float legEndpointPosition[3*(LEGS)];
 
 float prevLegEndpointPosition[3*(LEGS)];
 
+int legEnable[LEGS] = {1, 0, 0, 0};
+
 float legEndpointStandInit[3*(LEGS)] = {000, 125, 85,  // mm; {back, down, outer}
                                         000, 125, 85,
                                         000, 125, 85,
@@ -120,7 +122,7 @@ float maxEndpointVelocity = 100; // mm/s
 // Setting leg endpoint limits
 float maxLegEndpointPosition[3] = {150, 250, 120};
 
-float minLegEndpointPosition[3] = {-50, 125,  50};
+float minLegEndpointPosition[3] = {-100, 125, 50};
 
 
 // Leg angle parameters
@@ -319,13 +321,21 @@ void establishSerialConnection() {
 
 // Function to attach pins to corresponding servos
 void attachServoPins() {
-  for (int servo = 0; servo < SERVOS; servo ++){  
-    // Attach pins to the corresponding servo
-    joints[servo].writeMicroseconds(servoStates[servo]);
-    joints[servo].attach(servoPins[servo]);
-  
-    // Delay before continuing
-    delay(25);
+  for (legIndex = 0; legIndex < LEGS; legIndex ++) {  
+    legIndexOffset = legIndex * 3;
+
+    // Attach pins to servos in leg
+    for (int servoOffset = 0; servoOffset < 3; servoOffset ++) {
+      joints[legIndexOffset+servoOffset].writeMicroseconds(servoStates[legIndexOffset+servoOffset]);
+      
+      // Attach pin to servo if leg enabled
+      if (legEnable[legIndex]) {
+        joints[legIndexOffset+servoOffset].attach(servoPins[legIndexOffset+servoOffset]);
+        
+        // Delay before continuing
+        delay(25);
+      }
+    }
   }
 }
 
@@ -697,6 +707,11 @@ void evaluateInverseKinematics(){
     // Solving for shoulder angle
     shoulderFootEffectiveAngle = atan2(pow(shoulderFootProjectionLength, 2),
                                        pow(legEndpointPosition[legIndexOffset+0], 2));
+    
+    if (legEndpointPosition[(3*legIndex)+0] < 0) {
+      shoulderFootEffectiveAngle = PI - shoulderFootEffectiveAngle;
+    }
+    
     cosKneeAngleSupplementary = - cosKneeAngle;
     sinKneeAngleSupplementary = sqrt(1 - pow(cosKneeAngleSupplementary, 2));
     shoulderAngleSupplementary = atan2(legLengths[2] * sinKneeAngleSupplementary, 
@@ -761,6 +776,7 @@ void writeStatesSerial() {
   static boolean writeLegAngles = true;
   static boolean writeServoAngles = true;
   static boolean writeKinematics = true;
+  static boolean writeLeg = true;
   static boolean writeStates = true;
   
   legIndexOffset = 3 * currentLeg;
@@ -769,7 +785,6 @@ void writeStatesSerial() {
 
   if (writeServo) {
     Serial.print("s ");
-    Serial.print(int(currentLeg));
   
     for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
       Serial.print(" ");
@@ -780,7 +795,6 @@ void writeStatesSerial() {
   
   if (writeLegAngles) {
     Serial.print("l ");
-    Serial.print(int(currentLeg));
   
     for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
       Serial.print(" ");
@@ -791,7 +805,6 @@ void writeStatesSerial() {
   
   if (writeServoAngles) {
     Serial.print("a ");
-    Serial.print(int(currentLeg));
   
     for (int servo = legIndexOffset; servo < (legIndexOffset+3); servo++){
       Serial.print(" ");
@@ -802,13 +815,24 @@ void writeStatesSerial() {
 
   if (writeKinematics) {
     Serial.print("k ");
-    Serial.print(int(currentLeg));
 
     for (int dim = legIndexOffset; dim < (legIndexOffset+3); dim++) {
       Serial.print(" ");
       Serial.print(int(legEndpointPosition[dim]));
     }
     Serial.print(" | ");
+  }
+
+  if (writeLeg) {
+    Serial.print("leg ");
+    Serial.print(currentLeg);
+
+    if (legEnable[currentLeg]) {
+      Serial.print(" en ");
+    } else {
+      Serial.print(" na ");
+    }
+    Serial.print("| ");
   }
 
   if (globalLegControl) {
@@ -828,9 +852,6 @@ void writeStatesSerial() {
       Serial.print(interpolationFraction);
     }
   }
-
-  Serial.print(" | sfea");
-  Serial.print(shoulderFootEffectiveAngle*180/PI);
 
   Serial.println(">");
 }
