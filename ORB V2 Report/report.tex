@@ -1,0 +1,75 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{graphicx}
+\usepackage{multicol}
+
+%The below section makes chapter and its name centered to the page
+\usepackage{blindtext}
+\usepackage{xpatch}
+\usepackage{mathptmx}
+\usepackage{geometry}
+\geometry{
+    right=25mm,
+    left=25mm,
+    top=25mm,
+    bottom=25mm
+}
+\graphicspath{{images/}}
+
+
+% Begin document
+\begin{document}
+
+% Cover
+\pagenumbering{gobble}
+\input{input/cover}
+
+
+
+% Certificate
+\newpage
+\pagenumbering{roman}
+\input{input/certificate}
+
+
+
+% Abstract
+\newpage
+\input{input/abstract}
+
+
+
+% Acknowledgement
+\newpage
+\input{input/acknowledgement}
+
+
+
+% Introduction
+\newpage
+\pagenumbering{arabic}    
+\chapter{Introduction}
+\input{input/introduction}
+
+
+
+% Design and Modelling
+\newpage
+\chapter{Design}
+\input{input/components}
+
+
+
+% Design and Modelling
+\newpage
+\input{input/cadDesign}
+
+
+
+% Visual odometry
+\newpage
+\chapter{Processes}
+\input{input/visualOdometry}
+
+
+
+\end{document}
