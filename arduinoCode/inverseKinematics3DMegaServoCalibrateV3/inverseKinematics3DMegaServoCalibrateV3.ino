@@ -52,7 +52,7 @@ boolean transition = false;
 
 // Timing
 unsigned int transitionBeginTime = 0;
-unsigned int standTransitionTime = 10000; 
+unsigned int standTransitionTime = 5000; 
 
 // Transition interpolation
 float interpolationFraction = 0;
@@ -89,7 +89,7 @@ int minServoStates[SERVOS] = {1255, 1845,  775,
                               1175, 1825,  900,
                               1725,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1915,  840, 1800,  
+int maxServoStates[SERVOS] = {1915,  840, 1562,  
                               1060, 1745, 1250,
                               1825,  950, 1790,
                               1055, 1925,  805};
@@ -110,10 +110,10 @@ float legEndpointPosition[3*(LEGS)];
 
 float prevLegEndpointPosition[3*(LEGS)];
 
-float legEndpointStandInit[3*(LEGS)] = {000, 125, 70,  // mm; {back, down, outer}
-                                        000, 125, 70,
-                                        000, 125, 70,
-                                        000, 125, 70};
+float legEndpointStandInit[3*(LEGS)] = {000, 125, 85,  // mm; {back, down, outer}
+                                        000, 125, 85,
+                                        000, 125, 85,
+                                        000, 125, 85};
 
 float maxEndpointVelocity = 100; // mm/s
 
@@ -682,7 +682,7 @@ void evaluateInverseKinematics(){
                          legEndpointPosition[legIndexOffset+1] * shoulderFootProjectionLength) / 
                          pow(hipFootProjectionLength, 2));
     // Make angle negative for downward hip movement
-    if ((legEndpointPosition[legIndexOffset+2] - legLengths[0]) < 0) {
+    if ((legEndpointPosition[legIndexOffset+2] - legLengths[0]) > 0) {
       legAngles[legIndexOffset+0] = -legAngles[legIndexOffset+0];
     }
     // Hip angle computed

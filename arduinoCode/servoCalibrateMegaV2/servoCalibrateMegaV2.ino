@@ -45,7 +45,7 @@ int minServoStates[SERVOS] = {1255, 1845,  775,
                               1175, 1825,  900,
                               1725,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1915,  840, 1800,  
+int maxServoStates[SERVOS] = {1915,  840, 1562,  
                               1060, 1745, 1250,
                               1825,  950, 1790,
                               1055, 1925,  805};
@@ -65,11 +65,11 @@ unsigned long prevServo = millis();
 
              // Controller state
 // Number of independent controller state variables
-#define STATES 9
+#define STATES 10
 #define MIDSTATE 50
 
 // L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0};
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0, 0};
 int currentLeg = 0;
 int legServoIndexOffset = 3*currentLeg;
 
@@ -374,7 +374,7 @@ void checkLegChange() {
 
 // Function to detach servos and reset
 void checkReset() {
-  if (controller[8]==1) {
+  if (controller[9]==1) {
     detachServoPins();
     wdt_enable(WDTO_250MS);
     
