@@ -63,13 +63,17 @@ unsigned int servoRefresh = 10;
 unsigned long prevServo = millis();
 
 
-             // Controller state
+// Controller state
 // Number of independent controller state variables
-#define STATES 10
+#define STATES 11
 #define MIDSTATE 50
 
-// L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0, 0};
+// Controller variables
+// L3x2, R3x2, L2, R2, Square, Cross, Triangle, Circle, Options
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, 
+                          MIDSTATE,        0,        0,
+                                 0,        0,        0,
+                                 0,        0};
 int currentLeg = 0;
 int legServoIndexOffset = 3*currentLeg;
 
@@ -105,8 +109,8 @@ void loop(){
   if (newData){
     newData = false;
     extractControllerState();
-    checkLegChange();
     checkReset();
+    checkLegChange();
     writeServoStateSerial();
   }  
   
@@ -278,20 +282,6 @@ void updateServoStates(){
                                         (maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]) / 
                                         jointRanges[legServoIndexOffset+2]);
   
-    /*
-    servoStates[legServoIndexOffset+0] = servoStates[legServoIndexOffset+0] + (maxSwingRate*(controller[0] - MIDSTATE) / MIDSTATE) * 
-                                        ((maxServoStates[legServoIndexOffset+0] - minServoStates[legServoIndexOffset+0]) / 
-                                        abs(maxServoStates[legServoIndexOffset+0] - minServoStates[legServoIndexOffset+0]));
-                                        
-    servoStates[legServoIndexOffset+1] = servoStates[legServoIndexOffset+1] + (maxSwingRate*(controller[2] - MIDSTATE) / MIDSTATE) * 
-                                        (-(minServoStates[legServoIndexOffset+1] - maxServoStates[legServoIndexOffset+1]) / 
-                                        abs(minServoStates[legServoIndexOffset+1] - maxServoStates[legServoIndexOffset+1]));
-                                        
-    servoStates[legServoIndexOffset+2] = servoStates[legServoIndexOffset+2] + (maxSwingRate*(controller[5] - controller[4]) / MIDSTATE) * 
-                                        ((maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]) / 
-                                        abs(maxServoStates[legServoIndexOffset+2] - minServoStates[legServoIndexOffset+2]));
-    */
-  
     prevServo = currentTime;
   }
 }
@@ -374,7 +364,7 @@ void checkLegChange() {
 
 // Function to detach servos and reset
 void checkReset() {
-  if (controller[9]==1) {
+  if (controller[10]==1) {
     detachServoPins();
     wdt_enable(WDTO_250MS);
     

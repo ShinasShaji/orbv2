@@ -13,7 +13,6 @@ float legLengths[4] = {70,      // mm; length from hip to shoulder
                        150,     // mm; length from knee to foot center
                        5        // mm; foot depth
                        };
-// Note that the parameters above are currently inaccurate
 
 
 // Timing variables
@@ -34,12 +33,15 @@ unsigned int pingInterval = 500;
 
 // Controller state
 // Number of independent controller state variables
-#define STATES 10
+#define STATES 11
 #define MIDSTATE 50
 
 // Controller variables
-// L3x2, R3x2, L2, R2, Square
-int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, MIDSTATE, 0, 0, 0, 0, 0, 0};
+// L3x2, R3x2, L2, R2, Square, Cross, Triangle, Circle, Options
+int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE, 
+                          MIDSTATE,        0,        0,
+                                 0,        0,        0,
+                                 0,        0};
 int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
@@ -388,7 +390,8 @@ void setLegAnglesToSit() {
 
 // Function to detach servos and reset
 void checkReset() {
-  if (controller[9]==1) {
+  // On Options press
+  if (controller[10]==1) {
     detachServoPins();
     wdt_enable(WDTO_250MS);
     
@@ -399,30 +402,12 @@ void checkReset() {
 }
 
 
-// Function to check for leg change
-void checkLegChange(){
-  static boolean legChange = false;
-
-  if ((controller[6]==1)&&(legChange==false)){
-    legChange = true;
-    currentLeg = currentLeg + 1;
-    
-    if (currentLeg > (LEGS - 1)) {
-      currentLeg = 0;
-    }
-  }
-  
-  else if ((controller[6]==0)&&(legChange==true)){
-    legChange = false;
-  }
-}
-
-
 // Function to check for global leg control
 void checkGlobalLegControl(){  
   static boolean globalLegControlChange = false;
 
-  if ((controller[7]==1)&&(globalLegControlChange==false)){
+  // On Circle press
+  if ((controller[9]==1)&&(globalLegControlChange==false)){
     globalLegControlChange = true;
     
     if (globalLegControl) {
@@ -433,7 +418,7 @@ void checkGlobalLegControl(){
     }
   }
   
-  else if ((controller[7]==0)&&(globalLegControlChange==true)){
+  else if ((controller[9]==0)&&(globalLegControlChange==true)){
     globalLegControlChange = false;
   }
 }
@@ -443,6 +428,7 @@ void checkGlobalLegControl(){
 void checkStand() {
   static boolean standChange = false;
   
+  // On Triangle press
   if ((controller[8]==1)&&(standChange==false)){
     standChange = true;
     
@@ -475,6 +461,26 @@ void checkStand() {
   else if ((controller[8]==0)&&(standChange==true)){
     standChange = false;
   } 
+}
+
+
+// Function to check for leg change
+void checkLegChange(){
+  static boolean legChange = false;
+
+  // On Square press
+  if ((controller[6]==1)&&(legChange==false)){
+    legChange = true;
+    currentLeg = currentLeg + 1;
+    
+    if (currentLeg > (LEGS - 1)) {
+      currentLeg = 0;
+    }
+  }
+  
+  else if ((controller[6]==0)&&(legChange==true)){
+    legChange = false;
+  }
 }
 
 
