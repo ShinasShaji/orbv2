@@ -20,7 +20,7 @@ class DS4(Controller):
         self.exitFlag = False
 
         # Print control state on change
-        self.verbose = True
+        self.verbose = False
 
         # State array; L3(x2), R3(x2), L2, R2, Square
         self.state = [self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \

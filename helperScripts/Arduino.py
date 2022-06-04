@@ -20,6 +20,7 @@ class Arduino:
 
     testWord = "ping"
 
+    writeVerbose = False
     verbose = True
 
     # Use different port name list for connection based on platform
@@ -92,7 +93,7 @@ class Arduino:
             message = "".join(["<", content, ">"]).encode("utf_8")
             self.arduino.write(message)
 
-            if self.verbose:
+            if self.writeVerbose:
                 print("Serial write:", content)
 
             self.syncEvent.clear()
