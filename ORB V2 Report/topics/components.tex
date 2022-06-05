@@ -1,0 +1,44 @@
+\section{Component Design}
+
+This section details the design of the components used in this project.
+
+A very critical part of the design of a quadruped robot is the design of the mechanical legs. These legs must be able to handle the load of the robot and any other load that may be placed on it (referred to as static loads), along with withstanding the dynamic loads experienced when the robot is in motion. The design of mechanical legs involves choosing the actuator and its transmission mechanism, designing the structure of the mechanical leg, and choosing an efficient method of fabricating said mechanical leg.
+
+The computing and control hardware also form a crucial part of the robot. The control hardware interfaces with the actuator and drives the actuator optimally to achieve the desired result. The control harware may use a lower level microcontroller to handle time-critical tasks such as leg actuator and dynamics control. A higher level computing unit may handle compute-intensive software and algorithms which are soft time-constrained, and also offer a user interface for intuitive control of the robot.
+
+The power requirements of the actuators and the conmpute and control architectures also need to be met with high efficiency and with minimum weight, to minimize the dead weight of the robot and heat dissipation.
+
+
+\subsection{MG995 - Servo Motor}
+MG995 is a servo motor that is popular for its acceptable performance and low price. The motor is used in many applications, including robotics and drones.
+
+MG995 has three terminals, as mentioned in pin diagram. Pin function are given in \ref{table:MG995PinOut}.
+
+\begin{table}
+\centering
+    \begin{tabular}{ |c|c|c| } 
+    \hline
+    Pin & Name & Function\\
+    \hline 
+    1 & Signal pin (Orange pin) & Control PWM signal stating axis position \\
+    2 & VCC (Red pin) & Input voltage from 5V - 7.2V power supply\\ 
+    3 & Ground (Brown pin) & Ground terminal\\ 
+
+    \hline
+    \end{tabular}
+    \caption{MG995 pin-out}
+    \label{table:MG995PinOut}
+\end{table}
+
+\subsection{Raspberry Pi}
+\subsection{Arduino Mega}
+\subsection{RPLiDAR A1M8}
+\subsection{Stereo Camera}
+\subsection{Ultrasonic Sensor}
+\subsection{SMPS}
+
+
+
+
+
+

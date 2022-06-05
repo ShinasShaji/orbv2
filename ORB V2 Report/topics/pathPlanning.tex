@@ -13,38 +13,46 @@ The equation is given below.
 \[F-cost = G-cost + H-cost\]
 
 An open list keeps track of the nodes that need to be explored and begins with the start node. This open list, often a \emph{priority queue} data structure is used to keep track of all upcoming nodes. When a path runs out of scope or is not possible to traverse any longer, another nearest neighbour node is taken from the open list.
-\[Open = \{(F-cost, \ Node1),(F-cost2, \ Node2), (F-cost2, \ Node2) .... \} \]
-This open list is updated repeatedly during the operation of the algorithm.
+
+\[Open = \{(F-cost, \ Node1),(F-cost2, \ Node2), (F-cost2, \ Node2) .... \}\]
+
+This open list is continually updated during the operation of the algorithm.
+
 \newpage
-\textbf{Flowchart}\\ 
-\begin{center}
-    \includegraphics[width=1\textwidth]{Astar}     
-\end{center}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\textwidth]{Astar}
+    \caption{Flowchart}
+    \label{fig:pathPlanningFlowchart}
+\end{figure}
 
 \vspace{2cm}
 \begin{algorithm}[hbt!]
-    \caption{A* Path Planning }\label{alg:cap}
+    \caption{A* Path Planning}
+    \label{alg:AStarAlgorithm}
     
     \begin{algorithmic}[1]
     
-        \Require $ogrid \gets Occupancy\ grid\ data\ from\ RPLiDAR$
-        \State $Define\ The\ Start\ and\ End\ Node$
-        \State $First\ consider\ the\ unoccupied\ neighbouring\ nodes\ of\ the\ start\ node$
-        \State $Evaluate\  the\ G-cost\ and\ H-cost$
-        \State $Add\ node\ with\ lowest\ F-cost\ to\ open\ set$
-        \State $Consider\ the\ neighboring\ nodes\ with\ lowest\ F-cost\ and\ repeat\ from\ step\ 3$
-        \State $Terminate\ the\ Alogorithm\ once\ the\ H-cost\ is\ 0$
-        \State $Trace\ back\ the\ Last\ Nodes\ to\ find\ the\ optimum\ path$
-        %\\ $To\ be\ continued...$
+        \Require $ogrid \gets Occupancy \ grid \ data \ from \ RPLiDAR$
+        \State $Define \ the \ start \ and \ end\ nodes$
+        \State $First \ consider \ unoccupied \ neighbouring \ nodes \ of \ start \ node$
+        \State $Evaluate \ G-cost \ and \ H-cost$
+        \State $Add \ node \ with \ lowest \ F-cost \ to \ open \ set$
+        \State $Consider \ neighboring \ nodes \ with \ lowest \ F-cost \ and \ repeat \ from \ step \ 3 $
+        \State $Terminate \ the \ algorithm \ once \ H-cost \ is \ 0 $
+        \State $Trace \ back \ last \ nodes\ to \ find \ optimum \ path$
         
     \end{algorithmic}
 \end{algorithm}
 
-\newpage
-For example consider a graph as shown below with multiple nodes A, B, C and D interconnected with weighted edges,i.e. multiple distance values are associated with it.
-\begin{center}
-    \includegraphics[width=0.45\textwidth]{nodesPath}     
-\end{center}
+For example, consider the graph shown below with nodes A, B, C and D interconnected with weighted edges, i.e., multiple distance values are associated with the graph.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\textwidth]{nodesPath}
+    \caption{Weighted graph with nodes A, B, C and D}
+    \label{fig:weightedGraph}
+\end{figure}
 
 Here the Start node is A and the End node is D. The distance assciated with multiple paths are shown in figure. ie There are 2 ways from A to C, with distance values 1 and 2. The lowest weighted edge is chosen between these two. In this case, the shortest distance between them is 1 and that path is chosen. Thereafter reaching C the G-cost becomes 1 and so on. In the implementation these nodes are considered as the cells of the occupancy grid and the weights for the edges would be set to default as 1, because all the adjacent cells are in equal distances essentially. i.e. If the robot has to cross 2 cells to reach the destination, the distance or the cost would be 2. The intention of the algorithm would be to find the optimum path to reach the destination, here the optimum F-cost would 3 when the path A-C-D is traversed.
 
@@ -53,71 +61,90 @@ To start off with the algorithm we have to insert the start node, along with the
 \[Open = \{(F-cost, \ Node)\} = \{(0, \ A)\}\]
 
 The inital Costs of the respective nodes are represented in the table.Since we dont consider the start node as a neighbouring node all the values are set defuult to 0. while the other nodes B, C and D have a possibility of being considered as the Neighbouring node and thus the values are set as default to $\infty$. 
-\begin{center}
-\begin{tabular}{ |c|c|c|c| } 
-\hline
-Nodes & F-cost & G-cost & H-cost \\
-\hline 
-A & 0 & 0 & 0\\ 
-B & $\infty$ & $\infty$ & $\infty$\\ 
-C & $\infty$ & $\infty$ & $\infty$\\ 
-D & $\infty$ & $\infty$ & $\infty$\\
-\hline
-\end{tabular}
-\end{center}
+
+\begin{table}
+\centering
+    \begin{tabular}{ |c|c|c|c| } 
+    \hline
+    Nodes & F-cost & G-cost & H-cost \\
+    \hline 
+    A & 0 & 0 & 0\\ 
+    B & $\infty$ & $\infty$ & $\infty$\\ 
+    C & $\infty$ & $\infty$ & $\infty$\\ 
+    D & $\infty$ & $\infty$ & $\infty$\\
+    \hline
+    \end{tabular}
+    \caption{Nodes and their costs}
+    \label{table:nodeCost0}
+\end{table}
 
 Now the first neighbouring node C is considered and the lowes G cost available to it is 1 and using the manhattan distance formula the h-cost is assumed to be 1 although the value might be incorrect. Then the overall f cost is 2. and the last node we came from is A. 
 
-\begin{center}
-\begin{tabular}{ |c|c|c|c|c| } 
-\hline
-Nodes & F-cost & G-cost & H-cost & Last Node \\
-\hline 
-A & 0 & 0 & 0 &\\ 
-B & $\infty$ & $\infty$ & $\infty$ &\\ 
-C & 2 & 1 & 1 & A\\ 
-D & $\infty$ & $\infty$ & $\infty$ &\\
-\hline
-\end{tabular}
-\end{center}
+\begin{table}
+\centering
+    \begin{tabular}{ |c|c|c|c|c| } 
+    \hline
+    Nodes & F-cost & G-cost & H-cost & Last Node \\
+    \hline 
+    A & 0 & 0 & 0 &\\ 
+    B & $\infty$ & $\infty$ & $\infty$ &\\ 
+    C & 2 & 1 & 1 & A\\ 
+    D & $\infty$ & $\infty$ & $\infty$ &\\
+    \hline
+    \end{tabular}
+    \caption{Nodes and their costs}
+    \label{table:nodeCost1}
+\end{table}
+
 Now this node aloong with its F-cost is added to the open set of neighbouring nodes.
+
 \[Open = \{(2, \ C)\}\]
+
 In the open set there is only one node so there is no comparisson to make with respect to the shortest F-cost.Now we consider the Node C and its neighbours, D and B. In the case of B the G-cost is 4 and H-cost is assumed, while in the case of D, the G-cost is 3. 
     The table is updated as shown below
 
-\begin{center}
-\begin{tabular}{ |c|c|c|c|c| } 
-\hline
-Nodes & F-cost & G-cost & H-cost & Last Node \\
-\hline     
-A & 0 & 0 & 0 &\\ 
-B & 6 & 4 & 2 & C\\ 
-C & 2 & 1 & 1 & A\\ 
-D & 3 & 3 & 0 & C\\
-\hline
-\end{tabular}
-\end{center}
+\begin{table}
+\centering
+    \begin{tabular}{ |c|c|c|c|c| } 
+    \hline
+    Nodes & F-cost & G-cost & H-cost & Last Node \\
+    \hline     
+    A & 0 & 0 & 0 &\\ 
+    B & 6 & 4 & 2 & C\\ 
+    C & 2 & 1 & 1 & A\\ 
+    D & 3 & 3 & 0 & C\\
+    \hline
+    \end{tabular}
+    \caption{Nodes and their costs}
+    \label{table:nodeCost2}
+\end{table}
 
-Therefore the node with the lower F-cost,D , is added to the open set and the node b is ignored.The value of H-cost is 0 for node D, Since it is the End node.
-\[Open = \{(2, \ C)\}, \{(3,D)\}\]
+Therefore the node with the lower F-cost, D, is added to the open set and the node B is ignored.The value of H-cost is 0 for node D, since it is the end node.
+
+\[Open = \{(2, \ C)\}, \{(3, \ D)\}\]
 
 While comparing the F-costs of the nodes in the open set, we find the End node and its taken out of the open set to complete the algorithm.
-Now all we have to do is backtrack all the last nodes. i.e. D from C, C from A, and thus we get the optimum path, \emph A-C-D.
-For the purpose of visualization additional packages are required for python. PyGame is a 2-D graphics module for python, which is easy to use and implement the visualization tool effectively. 
-The occupancy grid originally has to be taken from the RPLiDAR data. Meanwhile, In this visualization tool, we can set the Start Node (in Orange), End node (in Turquoise), and Occupied Nodes(in Black). While the unoccupied Nodes are in white. The reconstrucet path is represented in purple, which is the optimum path for the robot to reach its destination.\\
-The input and output images of the Pygame window is given down below.\\
 
-\begin{multicols}{2}
-\centering
- \begin{center}   
+Now all we have to do is backtrack all the last nodes. i.e. D from C, C from A, and thus we get the optimum path, A-C-D.
+
+For the purpose of visualization additional python packages were used. \emph{PyGame} is a 2-D graphics module for python, which is easy to use and was used to implement the visualization tool effectively. 
+
+The occupancy grid is generated from the data produced by the RPLiDAR unit. For purposes of visualization, we set the Start Node (in Orange), End node (in Turquoise), and Occupied Nodes (in Black), with the unoccupied Nodes represented in white. The reconstructed path is represented in purple, and is the optimum path for the robot to reach its destination.
+
+The input and output images of the Pygame window are given in Figure \ref{fig:occupancyGrid} and Figure \ref{fig:reconstructedPath}.\\
+
+\begin{figure}
+    \begin{multicols}{2}
+    \centering
         \includegraphics[width=0.35\textwidth]{Astarinput}\\
-        \textbf Occupancy grid
-    \end{center}
-     \begin{center}   
+        \caption{Occupancy grid}
+        \label{fig:occupancyGrid}
+
         \includegraphics[width=0.35\textwidth]{Astaroutput}\\
-        \textbf Reconstructed Path
-    \end{center}
-\end{multicols}
+        \caption{Reconstructed Path}
+        \label{fig:reconstructedPath}
+    \end{multicols}
+\end{figure}
 
 
 

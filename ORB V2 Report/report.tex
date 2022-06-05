@@ -1,12 +1,15 @@
 \documentclass[12pt,a4paper]{report}
 \usepackage{graphicx}
+\usepackage{tikz}
 \usepackage{multicol}
-
-%The below section makes chapter and its name centered to the page
 \usepackage{blindtext}
 \usepackage{xpatch}
 \usepackage{mathptmx}
+\usepackage{amssymb}
 \usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
 \geometry{
     right=25mm,
     left=25mm,
@@ -16,60 +19,76 @@
 \graphicspath{{images/}}
 
 
+
 % Begin document
 \begin{document}
 
 % Cover
 \pagenumbering{gobble}
-\input{input/cover}
-
+\input{topics/cover}
 
 
 % Certificate
 \newpage
 \pagenumbering{roman}
-\input{input/certificate}
-
+\input{topics/certificate}
 
 
 % Abstract
 \newpage
-\input{input/abstract}
-
+\input{topics/abstract}
 
 
 % Acknowledgement
 \newpage
-\input{input/acknowledgement}
+\input{topics/acknowledgement}
 
 
+%content
+\newpage
+\input{topics/contents}
 
 % Introduction
 \newpage
 \pagenumbering{arabic}    
 \chapter{Introduction}
-\input{input/introduction}
-
+\input{topics/introduction}
 
 
 % Design and Modelling
 \newpage
 \chapter{Design}
-\input{input/components}
 
+% Components
+\input{topics/components}
 
 
 % Design and Modelling
 \newpage
-\input{input/cadDesign}
+\input{topics/cadDesign}
 
+
+% Processes
+\newpage
+\chapter{Processes}
+
+% Inverse kinematics
+\input{topics/inverseKinematics}
 
 
 % Visual odometry
 \newpage
-\chapter{Processes}
-\input{input/visualOdometry}
+\input{topics/visualOdometry}
 
+
+% Stair Detection
+\newpage
+\input{topics/stairDetection.tex}
+
+
+%Path Planning
+\newpage
+\input{topics/pathPlanning.tex}
 
 
 \end{document}
