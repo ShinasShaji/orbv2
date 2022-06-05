@@ -1,5 +1,5 @@
 /*
- * Reference implementation of 3D Inverse Kinematics for a legged robot
+ * Implementation of 3D Inverse Kinematics for O.R.B V2
  */
 
 #include <Servo.h>
@@ -13,14 +13,6 @@ float legLengths[4] = {70,      // mm; length from hip to shoulder
                        150,     // mm; length from knee to foot center
                        5        // mm; foot depth
                        };                         
-
-float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
-                               142.5, 0,  65,         //    x
-                              -142.5, 0, -65,         //    |__z
-                              -142.5, 0,  65};
-
-float legOffsetsRotated[3*(LEGS)];
-float legOffsetsRotatedTemp[3*(LEGS)];
 
 
 // Timing variables
@@ -91,6 +83,14 @@ Leg indices are defined as shown below:
 */
 
 int legEnable[LEGS] = {1, 1, 1, 1};
+
+float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
+                               142.5, 0,  65,         //    x
+                              -142.5, 0, -65,         //    |__z
+                              -142.5, 0,  65};
+
+float legOffsetsRotated[3*(LEGS)];
+float legOffsetsRotatedTemp[3*(LEGS)];
 
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {13, 12, 11,
