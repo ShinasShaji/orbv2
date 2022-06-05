@@ -22,7 +22,7 @@ class DS4(Controller):
         # Print control state on change
         self.verbose = False
 
-        # State array; L3(x2), R3(x2), L2, R2, Square
+        # State array; L3(x2), R3(x2), L2, R2, Square, Cross, Triangle, Circle, Options
         self.state = [self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
                       self.SCALEDMIDVALUE, self.SCALEDMIDVALUE, \
                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
