@@ -82,7 +82,15 @@ float twerkTranslations[3*(LEGS)];              // [x, y, z] offsets in mm
 #define LEGS 4
 #define SERVOS 12
 
-int legEnable[LEGS] = {1, 0, 0, 0};
+/* 
+Leg indices are defined as shown below:
+        0      1
+        
+        
+        2      3
+*/
+
+int legEnable[LEGS] = {1, 1, 1, 1};
 
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {13, 12, 11,
@@ -107,12 +115,12 @@ float servoAngles[SERVOS] = {20, 30, 0,    // Hip, shoulder, knee
 
 int minServoStates[SERVOS] = {1255, 1845,  775,
                               1690,  780, 2235,
-                              1175, 1825,  900,
+                              1175, 1900,  900,
                               1725,  915, 1750};
                               
 int maxServoStates[SERVOS] = {1915,  840, 1562,  
                               1060, 1745, 1250,
-                              1825,  950, 1790,
+                              1825, 1025, 1790,
                               1055, 1925,  805};
                               
 int jointRanges[SERVOS] = {60, 90, 90,
@@ -138,7 +146,7 @@ float legEndpointStandInit[3*(LEGS)] = {000, 125, 85,  // mm; {back, down, outer
 
 float legEndpointStayInit[3*(LEGS)];
 
-float maxEndpointVelocity = 100; // mm/s
+float maxEndpointVelocity = 150; // mm/s
 
 // Setting leg endpoint limits
 float maxLegEndpointPosition[3] = {150, 250, 120};
@@ -150,22 +158,23 @@ float minLegEndpointPosition[3] = {-100, 125, 50};
 float legAngles[SERVOS] = {0, 0, 0,     // {Hip, shoulder, knee}
                            0, 0, 0,
                            0, 0, 0,   
-                           0, 0, 0};      
-float minLegAngles[SERVOS] = {-20, 15, 30,
-                              -20, 15, 30,
-                              -20, 15, 30,
-                              -20, 15, 30};
+                           0, 0, 0};
+
+float minLegAngles[SERVOS] = {-20, 7.5, 37.5,
+                              -20, 7.5, 37.5,
+                              -20, 7.5, 37.5,
+                              -20, 7.5, 37.5};
                               
-float maxLegAngles[SERVOS] = {40, 105, 120,
-                              40, 105, 120,
-                              40, 105, 120,
-                              40, 105, 120};
+float maxLegAngles[SERVOS] = {40, 97.5, 127.5,
+                              40, 97.5, 127.5,
+                              40, 97.5, 127.5,
+                              40, 97.5, 127.5};
 
 // Leg angles for sitting state                   
-float legAnglesSit[SERVOS] = {0, 45, 30,     // {Hip, shoulder, knee}
-                              0, 45, 30,
-                              0, 45, 30,
-                              0, 45, 30};
+float legAnglesSit[SERVOS] = {0, 45, 25,     // {Hip, shoulder, knee}
+                              0, 45, 25,
+                              0, 45, 25,
+                              0, 45, 25};
 
 // Leg angles at beginning of transition
 float transitionBeginAngles[SERVOS];
