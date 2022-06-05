@@ -6,6 +6,7 @@
 \usepackage{xpatch}
 \usepackage{mathptmx}
 \usepackage{amssymb}
+\usepackage{float}
 \usepackage{geometry}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -27,10 +28,13 @@
 \pagenumbering{gobble}
 \input{topics/cover}
 
+% Declaration
+\newpage
+\pagenumbering{roman}
+\input{topics/declaration}
 
 % Certificate
 \newpage
-\pagenumbering{roman}
 \input{topics/certificate}
 
 
@@ -48,7 +52,15 @@
 \newpage
 \input{topics/contents}
 
-% Introduction
+%tables
+\newpage
+\input{topics/tables}
+
+% figures
+\newpage
+\input{topics/figures}
+
+% introduction
 \newpage
 \pagenumbering{arabic}    
 \chapter{Introduction}

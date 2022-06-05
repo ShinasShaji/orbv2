@@ -45,9 +45,9 @@ This open list is continually updated during the operation of the algorithm.
     \end{algorithmic}
 \end{algorithm}
 
-For example, consider the graph shown below with nodes A, B, C and D interconnected with weighted edges, i.e., multiple distance values are associated with the graph.
+For example, consider the graph shown in Figure \ref{fig:weightedGraph} with nodes A, B, C and D interconnected with weighted edges, i.e., multiple distance values are associated with the graph.
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.45\textwidth]{nodesPath}
     \caption{Weighted graph with nodes A, B, C and D}
@@ -62,7 +62,7 @@ To start off with the algorithm we have to insert the start node, along with the
 
 The inital Costs of the respective nodes are represented in the table.Since we dont consider the start node as a neighbouring node all the values are set defuult to 0. while the other nodes B, C and D have a possibility of being considered as the Neighbouring node and thus the values are set as default to $\infty$. 
 
-\begin{table}
+\begin{table}[H]
 \centering
     \begin{tabular}{ |c|c|c|c| } 
     \hline
@@ -80,7 +80,7 @@ The inital Costs of the respective nodes are represented in the table.Since we d
 
 Now the first neighbouring node C is considered and the lowes G cost available to it is 1 and using the manhattan distance formula the h-cost is assumed to be 1 although the value might be incorrect. Then the overall f cost is 2. and the last node we came from is A. 
 
-\begin{table}
+\begin{table}[H]
 \centering
     \begin{tabular}{ |c|c|c|c|c| } 
     \hline
@@ -103,7 +103,7 @@ Now this node aloong with its F-cost is added to the open set of neighbouring no
 In the open set there is only one node so there is no comparisson to make with respect to the shortest F-cost.Now we consider the Node C and its neighbours, D and B. In the case of B the G-cost is 4 and H-cost is assumed, while in the case of D, the G-cost is 3. 
     The table is updated as shown below
 
-\begin{table}
+\begin{table}[H]
 \centering
     \begin{tabular}{ |c|c|c|c|c| } 
     \hline
@@ -133,7 +133,7 @@ The occupancy grid is generated from the data produced by the RPLiDAR unit. For 
 
 The input and output images of the Pygame window are given in Figure \ref{fig:occupancyGrid} and Figure \ref{fig:reconstructedPath}.\\
 
-\begin{figure}
+\begin{figure}[H]
     \begin{multicols}{2}
     \centering
         \includegraphics[width=0.35\textwidth]{Astarinput}\\
@@ -145,8 +145,4 @@ The input and output images of the Pygame window are given in Figure \ref{fig:oc
         \label{fig:reconstructedPath}
     \end{multicols}
 \end{figure}
-
-
-
-
 

@@ -4,11 +4,9 @@
 In real-world application, the staircase is a common terrain occurrence. The robot is expected to navigate this terrain autonomously and with ease, thus requiring the implementation of stair detection. The stair detection algorithm takes images of stairs as primary input from the stereo camera setup. With the help of OpenCV fused with Hough Lines algorithm, the raw image data is further processed and refined to produce information about the stair contours, number of steps and step height.\\
 
 % Flowchart
-% * <Atul Vyshnav R> 21:10:13 05 Jun 2022 UTC+0530:
-% Why is the order different???
-\begin{figure}
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{stairDetect}
+    \includegraphics[width=0.9\textwidth]{stairDetect}
     \caption{Flowchart}
     \label{fig:stairDetectionFlowchart}
 \end{figure}
@@ -41,3 +39,31 @@ In real-world application, the staircase is a common terrain occurrence. The rob
         
     \end{algorithmic}
 \end{algorithm}
+
+\newpage
+
+\begin{figure}[H]
+  \centering
+    \begin{multicols}{2}
+        \includegraphics[width=0.4\textwidth]{stairDetectTest_1}
+        \caption{Test image}
+        \label{fig:testImage}
+        
+        \includegraphics[width=0.45\textwidth]{stairDetectTest_2}
+        \caption{Processed image}
+        \label{fig:processedImage}
+    \end{multicols}     
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+    \begin{multicols}{2}
+        \includegraphics[width=0.4\textwidth]{stairDetectTest_3}
+        \caption{Applying Hough Lines algorithm}
+        \label{fig:horizontalLinesRaw}
+        
+        \includegraphics[width=0.4\textwidth]{stairDetectTest_4}
+        \caption{Flitered final image}
+        \label{fig:horizontalLinesFiltered}
+    \end{multicols}     
+\end{figure}
