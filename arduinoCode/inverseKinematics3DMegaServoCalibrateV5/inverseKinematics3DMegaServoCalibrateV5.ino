@@ -60,14 +60,6 @@ unsigned int standTransitionTime = 2500;
 // Transition interpolation
 float interpolationFraction = 0;
 
-// Twerk control parameters and variables
-// Yaw in x-z plane                            x
-// Pitch in x-y plane                          |__ z
-// Roll in z-y plane
-float twerkAngles[3] = {0, 0, 0};
-float twerkAngleLimits[3] = {30, 15, 15};  // [yaw, pitch, roll] degrees
-float twerkTranslations[3*(LEGS)];              // [x, y, z] offsets in mm
-                                
 
 // Servo variables
 // Expands array as required
@@ -91,6 +83,15 @@ float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
 
 float legOffsetsRotated[3*(LEGS)];
 float legOffsetsRotatedTemp[3*(LEGS)];
+
+// Twerk control parameters and variables
+// Yaw in x-z plane                            x
+// Pitch in x-y plane                          |__ z
+// Roll in z-y plane
+float twerkAngles[3] = {0, 0, 0};
+float twerkAngleLimits[3] = {30, 15, 15};  // [yaw, pitch, roll] degrees
+float twerkTranslations[3*(LEGS)];              // [x, y, z] offsets in mm
+                                
 
 Servo joints[SERVOS];
 int servoPins[SERVOS] = {13, 12, 11,
