@@ -418,6 +418,14 @@ void storeLegEndpointOnStay() {
 }
 
 
+// Load stored stay legEndpoints
+void loadLegEndpointsOnStay() {
+  for (int dim = 0; dim < (3*LEGS); dim ++) {
+    legEndpointPosition[dim] = legEndpointStayInit[dim];
+  }
+}
+
+
 // Set leg angles to the sit position
 void setLegAnglesToSit() {
   for (int servo = 0; servo < SERVOS; servo++) {
@@ -603,12 +611,17 @@ void updateLegEndpointPosition() {
   }
 
   else if ((stand) && (!move)) {
+    // Load stored stay position
+    loadLegEndpointsOnStay();
+
     // Globally control robot height
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
       legIndexOffset = legIndex * 3;
 
       legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
-            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE; 
+            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
+      
+      legEndpointStayInit[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1];
     }
     
     // Yaw, pitch, roll
@@ -659,9 +672,10 @@ void updateLegEndpointPosition() {
                 (legOffsetsRotatedTemp[legIndexOffset + 1] * sin(twerkAngles[2]));
     }
 
-    // Finding per leg translation
+    // Finding per leg translation and translating leg endpoints
     for (int dim = 0; dim < (3*LEGS); dim ++) {
       twerkTranslations[dim] = legOffsetsRotated[dim] - legOffsets[dim];
+      legEndpointPosition[dim] = legEndpointPosition[dim] - twerkTranslations[dim];
     }
   }
 
