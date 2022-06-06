@@ -18,7 +18,7 @@ float legLengths[4] = {70,      // mm; length from hip to shoulder
 // Timing variables
 unsigned int currentTime = 0;               // ms
 unsigned int prevKinematic = 0;             // ms
-unsigned int kinematicsRefreshTime = 20;    // ms
+unsigned int kinematicsRefreshTime = 25;    // ms
 
 
 // Serial recieve variables
@@ -76,7 +76,7 @@ Leg indices are defined as shown below:
         2      3
 */
 
-int legEnable[LEGS] = {1, 0, 1, 0};
+int legEnable[LEGS] = {0, 0, 0, 0};
 
 float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
                                142.5, 0,  65,         //    x
