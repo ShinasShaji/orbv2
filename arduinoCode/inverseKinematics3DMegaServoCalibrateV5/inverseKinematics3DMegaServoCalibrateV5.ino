@@ -42,6 +42,8 @@ int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE,
                           MIDSTATE,        0,        0,
                                  0,        0,        0,
                                  0,        0};
+boolean filterControllerStates = true;
+float filterControllerWidth = 4;
 int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
@@ -74,7 +76,7 @@ Leg indices are defined as shown below:
         2      3
 */
 
-int legEnable[LEGS] = {1, 1, 1, 1};
+int legEnable[LEGS] = {1, 0, 1, 0};
 
 float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
                                142.5, 0,  65,         //    x
@@ -115,12 +117,12 @@ float servoAngles[SERVOS] = {20, 30, 0,    // Hip, shoulder, knee
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
 
 int minServoStates[SERVOS] = {1255, 1845,  775,
-                              1690,  780, 2235,
+                              1750,  780, 2235,
                               1175, 1900,  900,
                               1725,  915, 1750};
                               
 int maxServoStates[SERVOS] = {1915,  840, 1562,  
-                              1060, 1745, 1250,
+                              1120, 1745, 1250,
                               1825, 1025, 1790,
                               1055, 1925,  805};
                               
@@ -404,7 +406,14 @@ void extractControllerState(){
   if (*token == 'd'){
     token = strtok(NULL, " ");
     for (int state = 0; state < STATES; state ++){
+
+      // Selectively filter analog states
+      if ((filterControllerStates) && (state < 6)) {
+        controller[state] = int(float(controller[state]) + 
+                            (float(atoi(token) - controller[state]) / filterControllerWidth));
+      } else {
       controller[state] = atoi(token);
+      }
       
       token = strtok(NULL, " ");
     }
@@ -592,35 +601,7 @@ void interpolateStand() {
 
 // Function to update leg endpoint position based on controller input
 void updateLegEndpointPosition() {
-  if ((stand) && (globalLegControl)) {
-    for (legIndex = 0; legIndex < LEGS; legIndex++) {
-      legIndexOffset = legIndex * 3;
-    
-      legEndpointPosition[legIndexOffset+0] = legEndpointPosition[legIndexOffset+0] + 
-            maxEndpointVelocity * (controller[1] - MIDSTATE) / MIDSTATE;
-      legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
-            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
-      legEndpointPosition[legIndexOffset+2] = legEndpointPosition[legIndexOffset+2] + 
-            maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
-    }
-  }
-
-  else if ((stand) && (!globalLegControl)){
-    legIndexOffset = currentLeg * 3;
-    
-    legEndpointPosition[legIndexOffset+0] = legEndpointPosition[legIndexOffset+0] + 
-            maxEndpointVelocity * (controller[1] - MIDSTATE) / MIDSTATE;
-    legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
-            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
-    legEndpointPosition[legIndexOffset+2] = legEndpointPosition[legIndexOffset+2] + 
-            maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
-  }
-
-  else if ((stand) && (move)) {
-    // To implement
-  }
-
-  else if ((stand) && (!move)) {
+  if ((stand) && (!move)) {
     // Load stored stay position
     loadLegEndpointsOnStay();
 
@@ -635,9 +616,9 @@ void updateLegEndpointPosition() {
     }
     
     // Yaw, pitch, roll
-    twerkAngles[0] = twerkAngleLimits[0] * (controller[2] - MIDSTATE) / MIDSTATE;
-    twerkAngles[1] = twerkAngleLimits[1] * (controller[1] - MIDSTATE) / MIDSTATE;
-    twerkAngles[2] = twerkAngleLimits[2] * (controller[0] - MIDSTATE) / MIDSTATE;
+    twerkAngles[0] = twerkAngleLimits[0] * float(controller[2] - MIDSTATE) / MIDSTATE;
+    twerkAngles[1] = twerkAngleLimits[1] * float(controller[1] - MIDSTATE) / MIDSTATE;
+    twerkAngles[2] = twerkAngleLimits[2] * float(controller[0] - MIDSTATE) / MIDSTATE;
 
     for (legIndex = 0; legIndex < LEGS; legIndex ++) {
       legIndexOffset = legIndex * 3;
@@ -683,11 +664,52 @@ void updateLegEndpointPosition() {
     }
 
     // Finding per leg translation and translating leg endpoints
-    for (int dim = 0; dim < (3*LEGS); dim ++) {
-      twerkTranslations[dim] = legOffsetsRotated[dim] - legOffsets[dim];
-      legEndpointPosition[dim] = legEndpointPosition[dim] - twerkTranslations[dim];
+    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+      legIndexOffset = 3 * legIndex;
+      
+      for (int dim = 0; dim < 3; dim ++) {
+        twerkTranslations[legIndexOffset + dim] = 
+          legOffsetsRotated[legIndexOffset + dim] - legOffsets[legIndexOffset + dim];
+
+        if ((dim == 2) && ((legIndex == 3) || (legIndex == 1))) {
+          legEndpointPosition[legIndexOffset + dim] = 
+            legEndpointPosition[legIndexOffset + dim] - twerkTranslations[legIndexOffset + dim];
+        } else {
+          legEndpointPosition[legIndexOffset + dim] = 
+            legEndpointPosition[legIndexOffset + dim] + twerkTranslations[legIndexOffset + dim];
+        }
+      }
     }
   }
+
+  else if ((stand) && (move)) {
+    // To implement
+  }
+
+  else if ((stand) && (!globalLegControl)){
+    legIndexOffset = currentLeg * 3;
+    
+    legEndpointPosition[legIndexOffset+0] = legEndpointPosition[legIndexOffset+0] + 
+            maxEndpointVelocity * (controller[1] - MIDSTATE) / MIDSTATE;
+    legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
+            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
+    legEndpointPosition[legIndexOffset+2] = legEndpointPosition[legIndexOffset+2] + 
+            maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
+  }
+
+  else if ((stand) && (globalLegControl)) {
+    for (legIndex = 0; legIndex < LEGS; legIndex++) {
+      legIndexOffset = legIndex * 3;
+    
+      legEndpointPosition[legIndexOffset+0] = legEndpointPosition[legIndexOffset+0] + 
+            maxEndpointVelocity * (controller[1] - MIDSTATE) / MIDSTATE;
+      legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
+            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
+      legEndpointPosition[legIndexOffset+2] = legEndpointPosition[legIndexOffset+2] + 
+            maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
+    }
+  }
+
 
   // Limiting leg endpoint locations
   for (legIndex = 0; legIndex < LEGS; legIndex++) {
@@ -1012,6 +1034,7 @@ void writeStatesSerial() {
     if (transition) {
       Serial.print("transition ");
       Serial.print(interpolationFraction);
+      Serial.print(" ");
     }
 
     if (move) {
