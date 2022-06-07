@@ -16,9 +16,11 @@ float legLengths[4] = {70,      // mm; length from hip to shoulder
 
 
 // Timing variables
-unsigned int currentTime = 0;               // ms
-unsigned int prevKinematic = 0;             // ms
-unsigned int kinematicsRefreshTime = 25;    // ms
+unsigned int currentTime = 0;                  // ms
+unsigned int prevKinematic = 0;                // ms
+unsigned int kinematicsRefreshTime = 25;       // ms
+unsigned int sitKinematicsRefreshTime = 100;   // ms
+unsigned int standKinematicsRefreshTime = 25;  // ms
 
 
 // Serial recieve variables
@@ -116,13 +118,13 @@ float servoAngles[SERVOS] = {20, 30, 0,    // Hip, shoulder, knee
 
 // Range of movement = {60, 90, 120} degrees for {hip, shoulder, knee}
 
-int minServoStates[SERVOS] = {1255, 1845,  775,
-                              1750,  780, 2235,
+int minServoStates[SERVOS] = {1255, 1875,  775,
+                              1750,  750, 2235,
                               1175, 1900,  900,
                               1725,  915, 1750};
                               
-int maxServoStates[SERVOS] = {1915,  840, 1562,  
-                              1120, 1745, 1250,
+int maxServoStates[SERVOS] = {1915,  875, 1562,  
+                              1120, 1715, 1250,
                               1825, 1025, 1790,
                               1055, 1925,  805};
                               
@@ -206,8 +208,6 @@ void setup() {
   // Initializing leg endpoint position
   setLegEndpointToStand();
   
-  // Scaling to kinematics time step
-  maxEndpointVelocity = maxEndpointVelocity * kinematicsRefreshTime / 1000;
   // Converting angle limits from degrees to radians
   for (int angle = 0; angle < 3; angle ++) {
     twerkAngleLimits[angle] = twerkAngleLimits[angle] * PI / 180;
@@ -217,15 +217,22 @@ void setup() {
   currentTime = millis();
   
   // Differing initial position based on whether standing or sitting
+  // If stand
   if (stand) {
+    // Selecting parameters
+    setStandKinematicsParameters(); 
+    
     // Evaluate IK to initialize
     evaluateInverseKinematics();
     
     // Map and write leg angles to servos
     writeAnglesToServos();
   }
-  
+  // If sit
   else if (!stand) {
+    // Selecting parameters
+    setSitKinematicsParameters();
+    
     // Setting leg angles to sitting position
     setLegAnglesToSit();
     
@@ -282,6 +289,8 @@ void loop() {
       }
       // Transition to stand complete
       else {
+        // Selecting parameters
+        setStandKinematicsParameters();
         transition = false;
 
         // Initialize stand leg endpoints to potentially stay on
@@ -314,6 +323,8 @@ void loop() {
       } 
       // Transition to sit complete
       else {
+        // Selecting parameters
+        setSitKinematicsParameters();
         transition = false;
       }
     }
@@ -418,6 +429,24 @@ void extractControllerState(){
       token = strtok(NULL, " ");
     }
   }
+}
+
+
+// Set stand kinematics parameters
+void setStandKinematicsParameters() {
+  // Changing refresh time
+  kinematicsRefreshTime = standKinematicsRefreshTime;
+  // Scaling to kinematics time step
+  maxEndpointVelocity = maxEndpointVelocity * kinematicsRefreshTime / 1000;
+}
+
+
+// Set sit kinematics parameters
+void setSitKinematicsParameters() {
+  // Changing refresh time
+  kinematicsRefreshTime = sitKinematicsRefreshTime;
+  // Scaling to kinematics time step
+  maxEndpointVelocity = maxEndpointVelocity * kinematicsRefreshTime / 1000;
 }
 
 
