@@ -1,0 +1,40 @@
+\section{Implementation on Arduino}
+
+The processes mentioned in the preceding sections are implemented on either the Raspberry Pi, the robot's higher level computer, or on the Arduino Mega, it's lower level computer. The higher level computer is well suited to soft real-time tasks and tasks that can be done offline. This includes processes like LiDAR scanning and mapping, stereo vision and depth mapping, visual odometry, and other compute and memory intensive tasks that cannot be done on the Aruduino Mega. The lower level computer is well suited to real-time control and sensing needs, and directly controls the actuators and some sensors on board the robot. 
+
+Here, we discuss the current implementation of the control loop that runs on the Arduino Mega controller.
+
+\vspace{1cm}
+\centering
+\begin{tikzpicture}[node distance=2cm]
+
+% Nodes / blocks
+\node (start) [startstop] {Start};
+\node (init) [io, below of=start, text width=6.25cm] {Initialize with stored calibrations, parameters, and states};
+\node (estSerial) [process, below of=init] {Establish serial connection to Raspberry Pi};
+\node (ctrlInput) [io, below of=estSerial, text width=6.25cm] {Get and parse control and sensor inputs};
+\node (ifStateChange) [decision, below of=ctrlInput, yshift=-1.25cm] {State change?};
+\node (ifHalt) [decision, right of=ifStateChange, xshift=2.25cm] {Halt?};
+\node (stop) [startstop, right of=ifHalt, xshift=2.25cm] {Stop};
+\node (stateChange) [process, below of=ifHalt, text width=2.5cm] {Change state to command};
+\node (parameterUpdate) [process, below of=ifStateChange, yshift=-1.25cm] {Update parameters to input};
+\node (stateProcess) [process, below of=parameterUpdate, text width=4.5cm] {Run algorithms for current state};
+\node (controlActuators) [io, below of=stateProcess, text width=5cm] {Generate actuator control signals};
+\node (nextTimestep) [process, left of=parameterUpdate, text width=2.5cm, xshift=-2.5cm, yshift=1.5cm] {Wait until next time step};
+
+% Arrows
+\draw [arrow] (start) -- (init);
+\draw [arrow] (init) -- (estSerial);
+\draw [arrow] (estSerial) -- (ctrlInput);
+\draw [arrow] (ctrlInput) -- (ifStateChange);
+\draw [arrow] (ifStateChange) -- node[anchor=south] {yes} (ifHalt);
+\draw [arrow] (ifHalt) -- node[anchor=south] {yes} (stop);
+\draw [arrow] (ifHalt) -- node[anchor=east] {no} (stateChange);
+\draw [arrow] (ifStateChange) -- node[anchor=east] {no} (parameterUpdate);
+\draw [arrow] (stateChange) |- (parameterUpdate);
+\draw [arrow] (parameterUpdate) -- (stateProcess);
+\draw [arrow] (stateProcess) -- (controlActuators);
+\draw [arrow] (controlActuators) -| (nextTimestep);
+\draw [arrow] (nextTimestep) |- (ctrlInput);
+
+\end{tikzpicture}

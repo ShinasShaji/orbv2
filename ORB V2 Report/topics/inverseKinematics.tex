@@ -72,4 +72,17 @@ Thus, the knee angle, \(\theta_2\) is given by
 Now, we need to solve for the shoulder angle \(\theta_1\). For this,
 \[\theta_{1 \ effective} = \arctan{\left( \frac{l_4^2}{x^2} \right)}\]
 
+also,
+
+\[\cos{\bar{\theta_2}} = -\cos{\theta_2}\]
+\[\sin{\bar{\theta_2}} = \sqrt{1 - \cos{\bar{\theta_2}}}\]
+
+Furthermore, we can write
+
+\[\bar{\theta_1} = \arctan{\frac{l_2 \sin{\bar{\theta_2}}}{l_1 + l_2 \cos{\bar{\theta_2}}}}\]
+
+Finally, we get
+\[\theta_1 = \theta_{1 \ effective} - \bar{\theta_1}\]
+
+Thus, we have computed the hip, shoulder and elbow angles for one leg of the robot. The results can now be applied to the servo angles after accounting for their offsets and characteristics, which is done with the data obtained from calibrating the servos in each joint.
 

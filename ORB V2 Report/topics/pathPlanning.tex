@@ -47,14 +47,14 @@ This open list is continually updated during the operation of the algorithm.
 
 For example, consider the graph shown in Figure \ref{fig:weightedGraph} with nodes A, B, C and D interconnected with weighted edges, i.e., multiple distance values are associated with the graph.
 
-\begin{figure}[H]
+\begin{figure}[hbt!]
     \centering
     \includegraphics[width=0.45\textwidth]{nodesPath}
     \caption{Weighted graph with nodes A, B, C and D}
     \label{fig:weightedGraph}
 \end{figure}
 
-Here the Start node is A and the End node is D. The distance assciated with multiple paths are shown in figure. ie There are 2 ways from A to C, with distance values 1 and 2. The lowest weighted edge is chosen between these two. In this case, the shortest distance between them is 1 and that path is chosen. Thereafter reaching C the G-cost becomes 1 and so on. In the implementation these nodes are considered as the cells of the occupancy grid and the weights for the edges would be set to default as 1, because all the adjacent cells are in equal distances essentially. i.e. If the robot has to cross 2 cells to reach the destination, the distance or the cost would be 2. The intention of the algorithm would be to find the optimum path to reach the destination, here the optimum F-cost would 3 when the path A-C-D is traversed.
+Here the Start node is A and the End node is D. The distance assciated with multiple paths are shown in figure. ie There are 2 ways from A to C, with distance values 1 and 2. The lowest weighted edge is chosen between these two. In this case, the shortest distance between them is 1 and that path is chosen. Therefor, on reaching C, the G-cost becomes 1 and so on. In our implementation, these nodes are considered as the cells of the occupancy grid and the weights for the edges would initially be set by default as 1, because all the adjacent cells are in equal distances essentially. i.e. If the robot has to cross 2 cells to reach the destination, the distance or the cost would be 2. The intention of the algorithm would be to find the optimum path to reach the destination, here the optimum F-cost would 3 when the path A-C-D is traversed.
 
 To start off with the algorithm we have to insert the start node, along with the F-cost ( initially 0), into the open set, represented by a priority queue. 
 
@@ -101,7 +101,7 @@ Now this node aloong with its F-cost is added to the open set of neighbouring no
 \[Open = \{(2, \ C)\}\]
 
 In the open set there is only one node so there is no comparisson to make with respect to the shortest F-cost.Now we consider the Node C and its neighbours, D and B. In the case of B the G-cost is 4 and H-cost is assumed, while in the case of D, the G-cost is 3. 
-    The table is updated as shown below
+    The table is updated as shown in Table \ref{table:nodeCost2}.
 
 \begin{table}[H]
 \centering
@@ -129,18 +129,18 @@ Now all we have to do is backtrack all the last nodes. i.e. D from C, C from A, 
 
 For the purpose of visualization additional python packages were used. \emph{PyGame} is a 2-D graphics module for python, which is easy to use and was used to implement the visualization tool effectively. 
 
-The occupancy grid is generated from the data produced by the RPLiDAR unit. For purposes of visualization, we set the Start Node (in Orange), End node (in Turquoise), and Occupied Nodes (in Black), with the unoccupied Nodes represented in white. The reconstructed path is represented in purple, and is the optimum path for the robot to reach its destination.
+The occupancy grid is generated from the data produced by the RPLiDAR unit. For purposes of visualization, we set the Start Node (in Orange), End node (in Turquoise), and Occupied Nodes (in Black), with the unoccupied Nodes represented in white. The nodes already visited and closed off as non traversable are removed from the open set as they are not considered further and are represented in red. The reconstructed path is represented in purple, and is the optimum path for the robot to reach its destination.
 
 The input and output images of the Pygame window are given in Figure \ref{fig:occupancyGrid} and Figure \ref{fig:reconstructedPath}.\\
 
 \begin{figure}[H]
     \begin{multicols}{2}
     \centering
-        \includegraphics[width=0.35\textwidth]{Astarinput}\\
-        \caption{Occupancy grid}
+        \includegraphics[width=0.5\textwidth]{Astarinput}\\
+        \caption{Occupancy Grid}
         \label{fig:occupancyGrid}
 
-        \includegraphics[width=0.35\textwidth]{Astaroutput}\\
+        \includegraphics[width=0.5\textwidth]{Astaroutput}\\
         \caption{Reconstructed Path}
         \label{fig:reconstructedPath}
     \end{multicols}

@@ -91,6 +91,7 @@ Raspberry Pi 4 Model B is the latest product in the popular Raspberry Pi range o
 
 Key features include a high-performance 64-bit quad-core processor, dual-display support at resolutions up to 4K via a pair of micro-HDMI ports, hardware video decode at up to 4Kp60, up to 4GB of RAM, dual-band 2.4/5.0 GHz wireless LAN, Bluetooth 5.0, Gigabit Ethernet, USB 3.0, and PoE capability.
 
+In this project the Raspberry Pi acts as the main processor. It runs all the main python programming, for navigation control and processing. It passes the control programming to the Arduino Mega.
 \begin{figure}[H]
     \centering
         \includegraphics[width=0.75\textwidth]{raspi}
@@ -118,16 +119,112 @@ Key features include a high-performance 64-bit quad-core processor, dual-display
 
 The Arduino Mega 2560 is a microcontroller board based on the ATmega2560. It has 54 digital input/output pins (of which 15 can be used as PWM outputs), 16 analog inputs, 4 UARTs (hardware serial ports), a 16 MHz crystal oscillator, a USB connection, a power jack, an ICSP header, and a reset button. It contains everything needed to support the microcontroller; simply connect it to a computer with a USB cable or power it with a AC-to-DC adapter or battery to get started. The Mega 2560 board is compatible with most shields designed for the Uno and the former boards Duemilanove or Diecimila.
 
+Here we use the Arduino Mega to control the actuators. It's programmed in the arduino IDE embedded C language. Inorder to split the load, we are using  2 microcontrollers on the bot.
 \begin{figure}[H]
     \centering
-        \includegraphics[width=0.55\textwidth]{megapinout}
+        \includegraphics[width=0.75\textwidth]{megapinout}
         \caption{Ardunio Mega2560}
         \label{fig:megapinout}
 \end{figure}
 
+\subsubsection{Specifications}
+\begin{itemize}
+    \item Microcontroller: ATmega2560
+    \item Operating voltage: \(5V\)
+    \item Input voltage (recommended): \(7-12V\)
+    \item Input voltage (limit): \(6-20V\)
+    \item Digital I/O pins: 54 (of which 15 provide PWM output)
+    \item Analog input pins: 16
+    \item Direct Current per I/O pin: \(20 mA\)
+    \item Direct Current for \(3.3V\) pin: \(50 mA\)
+    \item Flash memory: \(256 KB\), of which \(8 KB\) is used by bootloader
+    \item SRAM: \(8 KB\)
+    \item EEPROM: \(4 KB\)
+    \item Clock speed: \(16 MHz\)
+    \item LED BUILTIN: Pin 13
+    \item Length: \(101.52 mm\)
+    \item Width: \(53.3 mm\)
+    \item Weight: \(37 g\)
+\end{itemize}
+
 \newpage
 \subsection{RPLiDAR A1M8}
+\subsubsection{Overview}
+
+The RPLIDAR A1M8 is a low cost 360 degree 2D laser scanner/LiDAR solution developed by SLAMTEC. The system can perform 360 degree scans within a 4 meter range. The produced 2D point cloud data can be used in mapping, localization and object/environment modeling. RPLIDAR A1's scanning frequency reaches 5.5 Hz when sampling 360 points each rotation, and can be configured up to 10 Hz at maximum. The RPLIDAR A1 is basically a laser triangulation range measurement system. It can work well in all kinds of indoor environments and in outdoor environments without sunlight.
+
+The RPLIDAR A1 (shown in Figure \ref{fig:rplidar}) contains a range scanner system and a motor system. After powering on, the RPLIDAR A1 starts rotating and scanning clockwise. The user can get range scan data through the Serial port/USB communication interface. It comes with a speed detection and adaptive scanning system, adjusting the frequency of the laser scanner automatically according to motor speed.
+
+\begin{figure}[H]
+    \centering
+        \includegraphics[width=0.75\textwidth]{rplidar}
+        \caption{RPLiDAR}
+        \label{fig:rplidar}
+\end{figure}
+
+\subsubsection{Mechanism}
+The RPLIDAR is based on laser triangulation ranging principle and uses high-speed vision acquisition and processing hardware developed by SLAMTEC. The system measures distance data more than 2000 times per second and provides high resolution distance output (\(<\)1\% of the distance, d in Figure \ref{fig:lidarScheme}). 
+
+\begin{figure}[H]
+    \centering
+        \includegraphics[width=0.55\textwidth]{lidarScheme}
+        \caption{The RPLIDAR A1 Working Schematic}
+        \label{fig:lidarScheme}
+\end{figure} 
+
+The RPLIDAR emits modulated infrared laser signal, which is then reflected by the object to be detected as shown in Figure \ref{fig:lidarScheme}. The returning signal is sampled by the vision acquisition system in the RPLIDAR A1. The DSP embedded in RPLIDAR A1 processes the sample data and outputs the range and heading to the object through the communication interface. A 3.3V-TTL serial port (UART) is used as the communication interface. The power interface of the RPLiDar is shown in Figure \ref{fig:rpwrinterface}.
+
+\begin{figure}[H]
+    \centering
+        \includegraphics[width=0.55\textwidth]{rpwrinterface}
+        \caption{RPLIDAR A1 Power Interface}
+        \label{fig:rpwrinterface}
+\end{figure}
+
+
+\newpage
 \subsection{Stereo Camera}
+\subsubsection{Overview} 
+A stereo camera is a type of camera with two or more lenses with a separate image sensor or film frame for each lens. This allows the camera to simulate human binocular vision, and therefore gives it the ability to capture three-dimensional images, a process known as stereo photography. The distance between the lenses in a typical stereo camera (the intra-axial distance) is about the distance between one's eyes (known as the intra-ocular distance) and is about 6.35 cm, though a longer base line (greater inter-camera distance) produces more extreme 3-dimensionality.
+
+\subsubsection{Calibration}
+
+
 \subsection{Ultrasonic Sensor}
+\subsubsection{Overview}
+The ultrasonic ranging module HC - SR04 provides 2cm - 400cm non-contact range measurement, with a ranging accuracy that can reach up to 3mm. The modules include ultrasonic transmitters, receivers and control circuits. The basic usage of the module is as follows.
+
+\begin{itemize}
+    \item  Use IO trigger for at least 10us with a high level signal.
+    \item  The module automatically sends eight 40 kHz pulses and detect whether there is a pulse signal back.
+    \item  If a signal is recieved back, time of high output IO duration is the time from sending the ultrasonic signal to returning.
+    \item The Pinout diagram of the module is shown in Figure \ref{fig:ping}.\\
+    (1) 5V Supply\\
+    (2) Trigger Pulse Input\\
+    (3) Echo Pulse Output\\
+    (4) 0V Ground\\
+\end{itemize} 
+
+\begin{figure}
+    \centering
+        \includegraphics[width=0.5\textwidth]{ping}
+        \caption{Ultrasonic Sensor Pinout diagram}
+        \label{fig:ping}
+\end{figure}
+
+\subsubsection{Specification}
+\begin{itemize}
+    \item Working Voltage: DC 5 V
+    \item Working Current \& Frequency: 15mA @ 40Hz
+    \item Range: 2cm - 4m 
+    \item MeasuringAngle: 15 degree
+    \item Trigger Input Signal: 10uS TTL pulse
+    \item Echo Output Signal: Input TTL lever signal and the range in proportion
+    \item Dimension: 45*20*15mm 
+\end{itemize}
+
+\newpage
 \subsection{SMPS}
+\subsubsection{Overview}
+
 

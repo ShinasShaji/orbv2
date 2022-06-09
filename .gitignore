@@ -114,6 +114,8 @@ bot
 .bot/
 matrix
 .matrix/
+orb
+.orb/
 .env/
 .venv/
 env/
@@ -123,6 +125,10 @@ env.bak/
 venv.bak/
 pythonenv*
 req.txt
+
+# Other
+testImages
+references
 
 # Spyder project settings
 .spyderproject

@@ -1,6 +1,5 @@
 \documentclass[12pt,a4paper]{report}
 \usepackage{graphicx}
-\usepackage{tikz}
 \usepackage{multicol}
 \usepackage{blindtext}
 \usepackage{xpatch}
@@ -10,6 +9,7 @@
 \usepackage{geometry}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+\usepackage{textcomp}
 \usepackage{multirow}
 \geometry{
     right=25mm,
@@ -18,6 +18,15 @@
     bottom=25mm
 }
 \graphicspath{{images/}}
+
+% For drawing flowcharts
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black]
+\tikzstyle{io} = [trapezium, trapezium left angle=70, trapezium right angle=110, minimum width=3cm, minimum height=1cm, text centered, draw=black]
+\tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black]
+\tikzstyle{decision} = [diamond, minimum width=3cm, minimum height=1cm, text centered, draw=black]
+\tikzstyle{arrow} = [thick,->,>=stealth]
 
 
 
@@ -28,10 +37,12 @@
 \pagenumbering{gobble}
 \input{topics/cover}
 
+
 % Declaration
 \newpage
 \pagenumbering{roman}
 \input{topics/declaration}
+
 
 % Certificate
 \newpage
@@ -48,28 +59,37 @@
 \input{topics/acknowledgement}
 
 
-%content
+% Contents
 \newpage
 \input{topics/contents}
 
-%tables
+
+% Tables
 \newpage
 \input{topics/tables}
 
-% figures
+
+% Figures
 \newpage
 \input{topics/figures}
 
-% introduction
+
+% Introduction
 \newpage
 \pagenumbering{arabic}    
 \chapter{Introduction}
 \input{topics/introduction}
 
 
+%Literature Survey
+\newpage
+\input{topics/literature.tex}
+
+
 % Design and Modelling
 \newpage
 \chapter{Design}
+
 
 % Components
 \input{topics/components}
@@ -83,6 +103,7 @@
 % Processes
 \newpage
 \chapter{Processes}
+
 
 % Inverse kinematics
 \input{topics/inverseKinematics}
@@ -98,9 +119,34 @@
 \input{topics/stairDetection.tex}
 
 
-%Path Planning
+% Path Planning
 \newpage
 \input{topics/pathPlanning.tex}
+
+
+% Arduino implementation
+\newpage
+\input{topics/arduinoImplementation}
+
+
+% Results
+\newpage
+\input{topics/results.tex}
+
+
+% Future scope
+\newpage
+\input{topics/futurescope.tex}
+
+
+% Conclusion
+\newpage
+\input{topics/conclusion.tex}
+
+
+% References
+\newpage
+\input{topics/references.tex}
 
 
 \end{document}
