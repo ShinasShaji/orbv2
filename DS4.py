@@ -317,4 +317,4 @@ if __name__ == "__main__":
             sys.exit()
 
     else:
-        print("This platform is unsupported")
+        print("Unsupported platform")
