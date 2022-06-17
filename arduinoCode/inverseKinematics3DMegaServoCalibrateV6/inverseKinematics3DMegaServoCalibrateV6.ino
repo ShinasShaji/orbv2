@@ -43,7 +43,7 @@ int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE,
                           MIDSTATE,        0,        0,
                                  0,        0,        0,
                                  0,        0};
-
+float filteredController[STATES];
 // Controller filtering
 boolean filterControllerStates = true;
 float filterControllerWidth = 4;
@@ -199,28 +199,33 @@ float shoulderAngleSupplementary = 0;
 // Pitch in x-y plane                          |__ z
 // Roll in z-y plane
 float twerkAngles[3] = {0, 0, 0};
-float twerkAngleLimits[3] = {30, 15, 15};       // [yaw, pitch, roll] degrees
+float twerkAngleLimits[3] = {25, 15, 15};       // [yaw, pitch, roll] degrees
 float twerkTranslations[3*(LEGS)];              // [x, y, z] offsets in mm
 
 
 // Gait parameters
 // Timing
 unsigned int strideReturnTime = 1000;     // ms
+unsigned int strideTime = 2000;           // ms
 
 // Stride parameters
-float strideCenter[2];                    // [x, z] stride center position
-float strideLength[2] = {0, 0};           // [x, z] diametrical stride length about center         
 float strideHeight = 50;                  // [y] stride height offset at peak
-float velocity[2] = {0, 0};               // [x, z] robot centered velocity
+float strideVelocity[3] = {0, 0, 0};            // [x, z, theta] robot centered linear and angular velocity
 
 // Stride states
 int legContact[LEGS] = {1, 1, 1, 1};      // 1 if in contact, 0 if lifted
-
-// Indexing
-int strideOffset = 0; 
+float strideCycle = 0;                    // Stride cycle state
 
 // Limits
-unsigned int maxStrideTime = 3000;        // ms
+unsigned int strideTime = 3000;
+unsigned int liftTime = 1000;
+float maxVelocity[3] = {0, 0, 0};
+
+// Timing
+unsigned int strideBeginTime = 0;
+
+// Indexing
+int strideIndexOffset = 0; 
 
 
 
@@ -431,9 +436,18 @@ void detachServoPins() {
 }
 
 
+// Initialize controller filter
+void initControllerFilter() {
+  for (int state = 0; state < STATES; state ++) {
+    filteredController[state] = controller[state];
+  }
+}
+
+
 /* 
  * Function to extract controller values from serial message
  * on message start character
+ * Also filters controller values if enabled
  */
 void extractControllerState(){
   char * token = strtok(receivedChars, " ");
@@ -444,10 +458,12 @@ void extractControllerState(){
 
       // Selectively filter analog states
       if ((filterControllerStates) && (state < 6)) {
-        controller[state] = int(float(controller[state]) + 
-                            (float(atoi(token) - controller[state]) / filterControllerWidth));
+        filteredController[state] = filteredController[state] + 
+          ((float(atoi(token)) - filteredController[state]) / filterControllerWidth);
+
+        controller[state] = int(filteredController[state]);
       } else {
-      controller[state] = atoi(token);
+        controller[state] = atoi(token);
       }
       
       token = strtok(NULL, " ");
@@ -508,11 +524,20 @@ void setLegAnglesToSit() {
 
 // Initialize stride parameters
 void initStrideParameters() {
-  // Initializing stride centers
-  strideCenter[0] = legEndpointStandInit[0];      // Copying [x, z] from stand init position
-  strideCenter[1] = legEndpointStandInit[2];
+  // Calculating max velocities
+  maxVelocity[0] = (maxLegEndpointPosition[0] - minLegEndpointPosition[0]) / strideTime;
+  maxVelocity[1] = (maxLegEndpointPosition[2] - minLegEndpointPosition[2]) / strideTime;
+  maxVelocity[2] = twerkAngleLimits[0] / strideTime;
 }
     
+
+// Grab velocity state
+void grabStrideVelocity() {
+  strideVelocity[0] = maxVelocity[0] * float(controller[1] - MIDSTATE) / MIDSTATE;
+  strideVelocity[1] = maxVelocity[1] * float(controller[0] - MIDSTATE) / MIDSTATE;
+  strideVelocity[2] = maxVelocity[2] * float(controller[2] - MIDSTATE) / MIDSTATE;
+}
+
 
 // Function to detach servos and reset
 void checkReset() {
@@ -665,6 +690,7 @@ void interpolateStand() {
 
 // Function to update leg endpoint position based on controller input
 void updateLegEndpointPosition() {
+  // Hold leg endpoint positions or stay
   if ((stand) && (!move)) {
     // Load stored stay position
     loadLegEndpointsOnStay();
@@ -746,8 +772,20 @@ void updateLegEndpointPosition() {
     }
   }
 
+  // Walk / move cycle
   else if ((stand) && (move)) {
-    // To implement
+    // Stride cycle state update
+    strideCycle = float(currentTime - transitionBeginTime) / 
+                  float(strideTime + liftTime);
+    if (strideCycle >= 1) {
+      strideCycle = 0;
+    }
+
+    if (strideCycle == 0) {
+      strideBeginTime = currentTime;
+      // Get controller inputs and update stride velocities for this stride
+      grabStrideVelocity();
+    }
   }
 
   else if ((stand) && (!globalLegControl)){
