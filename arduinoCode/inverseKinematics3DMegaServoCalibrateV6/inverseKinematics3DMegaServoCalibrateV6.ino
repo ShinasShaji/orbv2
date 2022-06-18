@@ -933,8 +933,10 @@ void updateServoStates(){
 
 // Function to write servoState to all servos
 void writeStatesToServos(){
+  // Flag for joint limit violation
   jointLimitsViolated = false;
   
+  // Check if joint limits violated
   for (int servo = 0; servo < SERVOS; servo ++) {
     // Clamp servoStates within limits
     if (maxServoStates[servo] > minServoStates[servo]){
@@ -957,21 +959,24 @@ void writeStatesToServos(){
         jointLimitsViolated = true;
       }
     }
-    
-    // Use previous states if joint limits violated
-    if (jointLimitsViolated) {
-      restorePrevServoStates();
-      restorePrevLegEndpointPosition();
+  }
 
-      break;
+  // Use previous states if joint limits violated
+  if (jointLimitsViolated) {
+    restorePrevServoStates();
+    restorePrevLegEndpointPosition();
+  }
+
+  // Update previous states if no violations
+  else if (!jointLimitsViolated) {
+    updatePrevServoStates();
+    updatePrevLegEndpointPosition();
+
+    // Write current servo states to servos
+    for (int servo = 0; servo < SERVOS; servo ++) {
+      // Write state to servo
+      joints[servo].writeMicroseconds(servoStates[servo]);
     }
-    else {
-      updatePrevServoStates();
-      updatePrevLegEndpointPosition();
-    }
-    
-    // Write state to servo
-    joints[servo].writeMicroseconds(servoStates[servo]);
   }
 }
 
