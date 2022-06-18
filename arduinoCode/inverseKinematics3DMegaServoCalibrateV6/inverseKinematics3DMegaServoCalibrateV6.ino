@@ -214,7 +214,15 @@ float strideVelocity[3] = {0, 0, 0};            // [x, z, theta] robot centered 
 
 // Stride states
 int legContact[LEGS] = {1, 1, 1, 1};      // 1 if in contact, 0 if lifted
-float strideCycle = 0;                    // Stride cycle state
+float overallStrideCycle = 0;                    // Stride cycle state
+float legStrideCycles = {0, 0, 0, 0};
+
+// Key stride points
+float overallStrideStart = 0;
+float legStrideLift = 0;
+
+// Leg positions at beginning of lift
+float liftBeginEndpointPosition[(3*LEGS)];
 
 // Limits
 unsigned int strideTime = 3000;
@@ -224,9 +232,6 @@ float maxVelocity[3] = {0, 0, 0};
 // Timing
 unsigned int strideBeginTime = 0;
 
-// Indexing
-int strideIndexOffset = 0; 
-
 
 
 // Setup function
@@ -234,6 +239,9 @@ void setup() {
   // Establishing connection through serial
   establishSerialConnection();
   
+  // Initializing controller filter
+  initializeControllerFilter();
+
   // Initializing leg endpoint position
   setLegEndpointToStand();
   
@@ -437,7 +445,7 @@ void detachServoPins() {
 
 
 // Initialize controller filter
-void initControllerFilter() {
+void initializeControllerFilter() {
   for (int state = 0; state < STATES; state ++) {
     filteredController[state] = controller[state];
   }
@@ -523,16 +531,23 @@ void setLegAnglesToSit() {
 
 
 // Initialize stride parameters
-void initStrideParameters() {
+void initializeStrideParameters() {
   // Calculating max velocities
   maxVelocity[0] = (maxLegEndpointPosition[0] - minLegEndpointPosition[0]) / strideTime;
   maxVelocity[1] = (maxLegEndpointPosition[2] - minLegEndpointPosition[2]) / strideTime;
   maxVelocity[2] = twerkAngleLimits[0] / strideTime;
+
+  // Calculating key points of stride cycle
+  overallStrideStart = 1 / LEGS;
+  legStrideLift = strideTime / (strideTime + liftTime);
+
+  // Initializing stride begin time
+  strideBeginTime = currentTime;
 }
     
 
 // Grab velocity state
-void grabStrideVelocity() {
+void updateStrideVelocity() {
   strideVelocity[0] = maxVelocity[0] * float(controller[1] - MIDSTATE) / MIDSTATE;
   strideVelocity[1] = maxVelocity[1] * float(controller[0] - MIDSTATE) / MIDSTATE;
   strideVelocity[2] = maxVelocity[2] * float(controller[2] - MIDSTATE) / MIDSTATE;
@@ -634,8 +649,8 @@ void checkMove() {
       // Move mode
       move = true;
 
-      // Initialize move mode
-      initStrideParameters();
+      // Initialize move mode and stride parameters
+      initializeStrideParameters();
     }
   }
   
@@ -690,7 +705,7 @@ void interpolateStand() {
 
 // Function to update leg endpoint position based on controller input
 void updateLegEndpointPosition() {
-  // Hold leg endpoint positions or stay
+  // Hold leg endpoint positions or stay, aka twerk mode
   if ((stand) && (!move)) {
     // Load stored stay position
     loadLegEndpointsOnStay();
@@ -775,17 +790,68 @@ void updateLegEndpointPosition() {
   // Walk / move cycle
   else if ((stand) && (move)) {
     // Stride cycle state update
-    strideCycle = float(currentTime - transitionBeginTime) / 
+    overallStrideCycle = float(currentTime - strideBeginTime) / 
                   float(strideTime + liftTime);
-    if (strideCycle >= 1) {
-      strideCycle = 0;
+
+    // Rollover to next cycle if overflow
+    if (overallStrideCycle >= 1) {
+      overallStrideCycle = overallStrideCycle - 1;
+      
+      // Update stride begin time
+      strideBeginTime = currentTime;
+
+      // Update stride velocities applicable for this stride
+      updateStrideVelocity();
+
+      // Generate leg stride start positions with stride velocities
+      /*
+
+      To implement
+
+      */
     }
 
-    if (strideCycle == 0) {
-      strideBeginTime = currentTime;
-      // Get controller inputs and update stride velocities for this stride
-      grabStrideVelocity();
+    // Updating legStrideCycles with overallStrideCycle
+    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+      legStrideCycles[legIndex] = overallStrideCycle - (overallStrideStart * legIndex);
+
+      if (legStrideCycles[legIndex] < 0) {
+        legStrideCycles[legIndex] = 1 + legStrideCycles[legIndex];
+      }
+      else if (legStrideCycles[legIndex] >= 1) {
+        legStrideCycles[legIndex] = legStrideCycles[legIndex] - 1;
+      }
     }
+    // Leg stride cycle states updated
+
+    // Flag each leg for lift at lift key stride points
+    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+      legIndexOffset = 3 * legIndex;
+
+      if ((legStrideCycles[legIndex] >= legStrideLift) && (legContact[legIndex] == 1)) {
+        legContact[legIndex] = 0;
+        
+        // Store position of leg endpoint at lift begin
+        for (int dim = 0; dim < 3; dim ++) {
+          liftBeginEndpointPosition[legIndexOffset + dim] = 
+                                              legEndpointPosition[legIndexOffset + dim];
+        }
+      }
+    }
+
+    // Transition from lift begin to stride start position for lifted legs
+    /*
+    
+    To implement
+
+    */
+
+    // Move planted leg endpoints according to stride velocities
+    /*
+
+    To implement
+
+    */
   }
 
   else if ((stand) && (!globalLegControl)){
