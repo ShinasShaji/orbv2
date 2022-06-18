@@ -211,7 +211,7 @@ float strideVelocity[3] = {0, 0, 0};            // [x, z, theta] robot centered 
 // Stride states
 int legContact[LEGS] = {1, 1, 1, 1};      // 1 if in contact, 0 if lifted
 float overallStrideCycle = 0;                    // Stride cycle state
-float legStrideCycles = {0, 0, 0, 0};
+float legStrideCycles[LEGS] = {0, 0, 0, 0};
 
 // Key stride points
 float overallStrideStart = 0;
