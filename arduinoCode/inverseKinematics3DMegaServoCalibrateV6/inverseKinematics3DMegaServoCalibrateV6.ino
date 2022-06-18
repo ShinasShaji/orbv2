@@ -86,13 +86,13 @@ int currentLeg = 0;
 int legIndex = 0;
 int legIndexOffset = 0;
 
-float legOffsets[3*(LEGS)] = { 142.5, 0, -65,         //   Top
+float legOffsets[(3*LEGS)] = { 142.5, 0, -65,         //   Top
                                142.5, 0,  65,         //    x
                               -142.5, 0, -65,         //    |__z
                               -142.5, 0,  65};        // Position of each leg reference from robot center
 
-float legOffsetsRotated[3*(LEGS)];
-float legOffsetsRotatedTemp[3*(LEGS)];
+float legOffsetsRotated[(3*LEGS)];
+float legOffsetsRotatedTemp[(3*LEGS)];
                                 
 
 Servo joints[SERVOS];
@@ -135,16 +135,16 @@ boolean jointLimitsViolated = false;
 
 
 // Leg endpoint positions; each leg has own reference
-float legEndpointPosition[3*(LEGS)];
+float legEndpointPosition[(3*LEGS)];
 
-float prevLegEndpointPosition[3*(LEGS)];
+float prevLegEndpointPosition[(3*LEGS)];
 
-float legEndpointStandInit[3*(LEGS)] = {00, 125, 85,  // mm; {back, down, outer}
+float legEndpointStandInit[(3*LEGS)] = {00, 125, 85,  // mm; {back, down, outer}
                                         00, 125, 85,
                                         00, 125, 85,
                                         00, 125, 85};
 
-float legEndpointStayInit[3*(LEGS)];
+float legEndpointStayInit[(3*LEGS)];
 
 float maxEndpointVelocity = 150; // mm/s
 
@@ -200,14 +200,10 @@ float shoulderAngleSupplementary = 0;
 // Roll in z-y plane
 float twerkAngles[3] = {0, 0, 0};
 float twerkAngleLimits[3] = {25, 15, 15};       // [yaw, pitch, roll] degrees
-float twerkTranslations[3*(LEGS)];              // [x, y, z] offsets in mm
+float twerkTranslations[(3*LEGS)];              // [x, y, z] offsets in mm
 
 
-// Gait parameters
-// Timing
-unsigned int strideReturnTime = 1000;     // ms
-unsigned int strideTime = 2000;           // ms
-
+// Gait / stride parameters
 // Stride parameters
 float strideHeight = 50;                  // [y] stride height offset at peak
 float strideVelocity[3] = {0, 0, 0};            // [x, z, theta] robot centered linear and angular velocity
@@ -914,7 +910,7 @@ void mapAnglesToServoAngles() {
 // Function to update servo states
 void updateServoStates(){
   for (legIndex = 0; legIndex < LEGS; legIndex++) {
-    legIndexOffset = 3*legIndex;
+    legIndexOffset = 3 * legIndex;
   
     servoStates[legIndexOffset+0] = minServoStates[legIndexOffset+0] + (servoAngles[legIndexOffset+0] *
                                         (maxServoStates[legIndexOffset+0] - minServoStates[legIndexOffset+0]) / 
