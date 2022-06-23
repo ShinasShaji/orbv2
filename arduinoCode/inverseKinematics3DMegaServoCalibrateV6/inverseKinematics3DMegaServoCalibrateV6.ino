@@ -206,7 +206,7 @@ float twerkTranslations[(3*LEGS)];              // [x, y, z] offsets in mm
 // Gait / stride parameters
 // Stride parameters
 float strideHeight = 50;                  // [y] stride height offset at peak
-float strideVelocity[3] = {0, 0, 0};            // [x, z, theta] robot centered linear and angular velocity
+float strideVelocity[3] = {0, 0, 0};      // [x, z, theta] robot centered linear and angular velocity
 
 // Stride states
 int legContact[LEGS] = {1, 1, 1, 1};      // 1 if in contact, 0 if lifted
@@ -217,8 +217,14 @@ float legStrideCycles[LEGS] = {0, 0, 0, 0};
 float overallStrideStart = 0;
 float legStrideLift = 0;
 
+// Computed leg positions at beginning of lift
+float legStrideStartPosition[(3*LEGS)];
+
 // Leg positions at beginning of lift
 float liftBeginEndpointPosition[(3*LEGS)];
+
+// Leg shift fraction for asymmetric min, max endpoints along [x, z]
+float legStrideStartShiftFraction[2] = {0, 0};
 
 // Limits
 unsigned int strideTime = 3000;
@@ -537,6 +543,15 @@ void initializeStrideParameters() {
   overallStrideStart = 1 / LEGS;
   legStrideLift = strideTime / (strideTime + liftTime);
 
+  // Fraction to shift position of leg endpoint at stride start if max, min leg endpoint 
+  // positions not symmetric
+  legStrideStartShiftFraction[0] = 
+                  abs(minLegEndpointPosition[0] - legEndpointStandInit[0]) / 
+                  abs(maxLegEndpointPosition[0] - minLegEndpointPosition[0]);
+  legStrideStartShiftFraction[1] = 
+                  abs(maxLegEndpointPosition[2] - legEndpointStandInit[2]) / 
+                  abs(maxLegEndpointPosition[2] - minLegEndpointPosition[2]);
+
   // Initializing stride begin time
   strideBeginTime = currentTime;
 }
@@ -799,12 +814,36 @@ void updateLegEndpointPosition() {
       // Update stride velocities applicable for this stride
       updateStrideVelocity();
 
+      // Globally control robot height
+      for (legIndex = 0; legIndex < LEGS; legIndex++) {
+        legIndexOffset = legIndex * 3;
+
+        legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
+            maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
+      }
+
       // Generate leg stride start positions with stride velocities
-      /*
+      // To implement: yaw calculation
+      for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+        legIndexOffset = 3 * legIndex;
 
-      To implement
+        legStrideStartPosition[legIndexOffset + 0] = 
+                  - strideVelocity[0] * strideTime * 
+                    legStrideStartShiftFraction[0];
 
-      */
+        legStrideStartPosition[legIndexOffset + 1] = 
+                  legEndpointPosition[legIndexOffset + 1];
+
+        if ((legIndex == 1) || (legIndex == 3)) {
+          legStrideStartPosition[legIndexOffset + 2] = 
+                    strideVelocity[1] * strideTime
+                  * legStrideStartShiftFraction[1];
+        } else {
+          legStrideStartPosition[legIndexOffset + 2] = 
+                  - strideVelocity[1] * strideTime
+                  * legStrideStartShiftFraction[1];
+        }
+      }
     }
 
     // Updating legStrideCycles with overallStrideCycle
