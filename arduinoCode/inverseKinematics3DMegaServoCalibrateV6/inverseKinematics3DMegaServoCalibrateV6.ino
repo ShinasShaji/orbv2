@@ -736,48 +736,8 @@ void updateLegEndpointPosition() {
     twerkAngles[1] = twerkAngleLimits[1] * float(controller[1] - MIDSTATE) / MIDSTATE;
     twerkAngles[2] = twerkAngleLimits[2] * float(controller[0] - MIDSTATE) / MIDSTATE;
 
-    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
-      legIndexOffset = legIndex * 3;
-
-      // Computing leg positions after yaw (in x-z plane)
-      // x
-      legOffsetsRotated[legIndexOffset + 0] = 
-                (legOffsets[legIndexOffset + 0] * cos(twerkAngles[0])) - 
-                (legOffsets[legIndexOffset + 2] * sin(twerkAngles[0]));
-      // y
-      legOffsetsRotated[legIndexOffset + 1] =
-                (legOffsets[legIndexOffset + 1]);
-      // z
-      legOffsetsRotated[legIndexOffset + 2] = 
-                (legOffsets[legIndexOffset + 0] * sin(twerkAngles[0])) +
-                (legOffsets[legIndexOffset + 2] * cos(twerkAngles[0]));
-      
-      // Computing leg positions after pitch (in x-y plane)
-      // x
-      legOffsetsRotatedTemp[legIndexOffset + 0] = 
-                (legOffsetsRotated[legIndexOffset + 0] * cos(twerkAngles[1])) - 
-                (legOffsetsRotated[legIndexOffset + 1] * sin(twerkAngles[1]));
-      // y
-      legOffsetsRotatedTemp[legIndexOffset + 1] = 
-                (legOffsetsRotated[legIndexOffset + 0] * sin(twerkAngles[1])) + 
-                (legOffsetsRotated[legIndexOffset + 1] * cos(twerkAngles[1]));
-      // z
-      legOffsetsRotatedTemp[legIndexOffset + 2] = 
-                (legOffsetsRotated[legIndexOffset + 2]);
-
-      // Computing leg positions after roll (in z-y plane)
-      // x
-      legOffsetsRotated[legIndexOffset + 0] = 
-                (legOffsetsRotatedTemp[legIndexOffset + 0]);
-      // y
-      legOffsetsRotated[legIndexOffset + 1] = 
-                (legOffsetsRotatedTemp[legIndexOffset + 2] * sin(twerkAngles[2])) +
-                (legOffsetsRotatedTemp[legIndexOffset + 1] * cos(twerkAngles[2]));
-      // z
-      legOffsetsRotated[legIndexOffset + 2] = 
-                (legOffsetsRotatedTemp[legIndexOffset + 2] * cos(twerkAngles[2])) -
-                (legOffsetsRotatedTemp[legIndexOffset + 1] * sin(twerkAngles[2]));
-    }
+    // Compute rotated leg offsets after yaw, pitch and roll
+    computeRotatedLegOffsets();
 
     // Finding per leg translation and translating leg endpoints
     for (legIndex = 0; legIndex < LEGS; legIndex ++) {
@@ -787,7 +747,7 @@ void updateLegEndpointPosition() {
         twerkTranslations[legIndexOffset + dim] = 
           legOffsetsRotated[legIndexOffset + dim] - legOffsets[legIndexOffset + dim];
 
-        if ((dim == 2) && ((legIndex == 3) || (legIndex == 1))) {
+        if ((dim == 2) && ((legIndex == 1) || (legIndex == 3))) {
           legEndpointPosition[legIndexOffset + dim] = 
             legEndpointPosition[legIndexOffset + dim] - twerkTranslations[legIndexOffset + dim];
         } else {
@@ -822,28 +782,46 @@ void updateLegEndpointPosition() {
             maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
       }
 
-      // Generate leg stride start positions with stride velocities
-      // To implement: yaw calculation
+      // To compute leg stride start positions with stride velocities
+      // Generating yaw angles to compute offset
+      twerkAngles[0] = strideVelocity[2] * strideTime;
+      twerkAngles[1] = 0;
+      twerkAngles[2] = 0;
+
+      // Compute rotated leg offsets using angles in twerkAngles
+      computeRotatedLegOffsets();
+
+      // Finding per leg translation and translating leg endpoints
+      for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+        legIndexOffset = 3 * legIndex;
+      
+        for (int dim = 0; dim < 3; dim ++) {
+          twerkTranslations[legIndexOffset + dim] = 
+            legOffsetsRotated[legIndexOffset + dim] - legOffsets[legIndexOffset + dim];
+        }
+      }
+
+      // Computing stride start positions
       for (legIndex = 0; legIndex < LEGS; legIndex ++) {
         legIndexOffset = 3 * legIndex;
 
         legStrideStartPosition[legIndexOffset + 0] = 
-                  - strideVelocity[0] * strideTime * 
-                    legStrideStartShiftFraction[0];
+                          ((- strideVelocity[0] * strideTime) + twerkTranslations[0])
+                            * legStrideStartShiftFraction[0];
 
-        legStrideStartPosition[legIndexOffset + 1] = 
-                  legEndpointPosition[legIndexOffset + 1];
+        legStrideStartPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1];
 
         if ((legIndex == 1) || (legIndex == 3)) {
           legStrideStartPosition[legIndexOffset + 2] = 
-                    strideVelocity[1] * strideTime
-                  * legStrideStartShiftFraction[1];
+                            ((strideVelocity[1] * strideTime) + twerkTranslations[2])
+                              * legStrideStartShiftFraction[1];
         } else {
           legStrideStartPosition[legIndexOffset + 2] = 
-                  - strideVelocity[1] * strideTime
-                  * legStrideStartShiftFraction[1];
+                            ((- strideVelocity[1] * strideTime) - twerkTranslations[2])
+                              * legStrideStartShiftFraction[1];
         }
       }
+      // Leg stride start positions computed
     }
 
     // Updating legStrideCycles with overallStrideCycle
@@ -930,6 +908,53 @@ void updateLegEndpointPosition() {
 }
 
 
+// Function to compute rotated leg offsets using angles in twerkAngles
+void computeRotatedLegOffsets() {
+  for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+    legIndexOffset = legIndex * 3;
+
+    // Computing leg positions after yaw (in x-z plane)
+    // x
+    legOffsetsRotated[legIndexOffset + 0] = 
+              (legOffsets[legIndexOffset + 0] * cos(twerkAngles[0])) - 
+              (legOffsets[legIndexOffset + 2] * sin(twerkAngles[0]));
+    // y
+    legOffsetsRotated[legIndexOffset + 1] =
+              (legOffsets[legIndexOffset + 1]);
+    // z
+    legOffsetsRotated[legIndexOffset + 2] = 
+              (legOffsets[legIndexOffset + 0] * sin(twerkAngles[0])) +
+              (legOffsets[legIndexOffset + 2] * cos(twerkAngles[0]));
+      
+    // Computing leg positions after pitch (in x-y plane)
+    // x
+    legOffsetsRotatedTemp[legIndexOffset + 0] = 
+                (legOffsetsRotated[legIndexOffset + 0] * cos(twerkAngles[1])) - 
+                (legOffsetsRotated[legIndexOffset + 1] * sin(twerkAngles[1]));
+    // y
+    legOffsetsRotatedTemp[legIndexOffset + 1] = 
+              (legOffsetsRotated[legIndexOffset + 0] * sin(twerkAngles[1])) + 
+              (legOffsetsRotated[legIndexOffset + 1] * cos(twerkAngles[1]));
+    // z
+    legOffsetsRotatedTemp[legIndexOffset + 2] = 
+              (legOffsetsRotated[legIndexOffset + 2]);
+
+    // Computing leg positions after roll (in z-y plane)
+    // x
+    legOffsetsRotated[legIndexOffset + 0] = 
+              (legOffsetsRotatedTemp[legIndexOffset + 0]);
+    // y
+    legOffsetsRotated[legIndexOffset + 1] = 
+              (legOffsetsRotatedTemp[legIndexOffset + 2] * sin(twerkAngles[2])) +
+              (legOffsetsRotatedTemp[legIndexOffset + 1] * cos(twerkAngles[2]));
+    // z
+    legOffsetsRotated[legIndexOffset + 2] = 
+              (legOffsetsRotatedTemp[legIndexOffset + 2] * cos(twerkAngles[2])) -
+              (legOffsetsRotatedTemp[legIndexOffset + 1] * sin(twerkAngles[2]));
+  }
+}
+
+
 // Function to map IK results to servos and their calibrations
 void mapAnglesToServoAngles() {
   for (int servo = 0; servo < SERVOS; servo++) {
@@ -952,16 +977,16 @@ void updateServoStates(){
     legIndexOffset = 3 * legIndex;
   
     servoStates[legIndexOffset+0] = minServoStates[legIndexOffset+0] + (servoAngles[legIndexOffset+0] *
-                                        (maxServoStates[legIndexOffset+0] - minServoStates[legIndexOffset+0]) / 
-                                        jointRanges[legIndexOffset+0]);
+                                  (maxServoStates[legIndexOffset+0] - minServoStates[legIndexOffset+0]) / 
+                                  jointRanges[legIndexOffset+0]);
                                         
     servoStates[legIndexOffset+1] = minServoStates[legIndexOffset+1] + (servoAngles[legIndexOffset+1] *
-                                        (maxServoStates[legIndexOffset+1] - minServoStates[legIndexOffset+1]) / 
-                                        jointRanges[legIndexOffset+1]);
+                                  (maxServoStates[legIndexOffset+1] - minServoStates[legIndexOffset+1]) / 
+                                  jointRanges[legIndexOffset+1]);
    
     servoStates[legIndexOffset+2] = minServoStates[legIndexOffset+2] + (servoAngles[legIndexOffset+2] *
-                                        (maxServoStates[legIndexOffset+2] - minServoStates[legIndexOffset+2]) / 
-                                        jointRanges[legIndexOffset+2]);
+                                  (maxServoStates[legIndexOffset+2] - minServoStates[legIndexOffset+2]) / 
+                                  jointRanges[legIndexOffset+2]);
   }
 }
 
@@ -1165,12 +1190,14 @@ void receiveSerialData() {
 
 // Function to write states to serial
 void writeStatesSerial() {
-  static boolean writeServo = true;
-  static boolean writeLegAngles = true;
-  static boolean writeServoAngles = true;
-  static boolean writeKinematics = true;
-  static boolean writeLeg = true;
+  static boolean writeServo = false;
+  static boolean writeLegAngles = false;
+  static boolean writeServoAngles = false;
+  static boolean writeKinematics = false;
+  static boolean writeLeg = false;
   static boolean writeStates = true;
+  static boolean writeVelocities = true;
+  static boolean writeStrideStart = true;
   
   legIndexOffset = 3 * currentLeg;
 
@@ -1247,6 +1274,23 @@ void writeStatesSerial() {
 
     if (move) {
       Serial.print("move ");
+      if (writeVelocities) {
+        Serial.print("vel ");
+        Serial.print(strideVelocity[0]);
+        Serial.print(" ");
+        Serial.print(strideVelocity[1]);
+        Serial.print(" ");
+        Serial.print(strideVelocity[2]);
+        Serial.print(" | ");
+      }
+      if (writeStrideStart) {
+        Serial.print("start ");
+        Serial.print(legStrideStartPosition[legIndexOffset + 0]);
+        Serial.print(" ");
+        Serial.print(legStrideStartPosition[legIndexOffset + 1]);
+        Serial.print(" ");
+        Serial.print(legStrideStartPosition[legIndexOffset + 2]);
+      }
     } else {
       Serial.print("stay ");
       Serial.print(twerkTranslations[legIndexOffset + 0]);
