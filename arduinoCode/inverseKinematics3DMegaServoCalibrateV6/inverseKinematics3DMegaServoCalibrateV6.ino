@@ -886,7 +886,7 @@ void updateLegEndpointPosition() {
         } 
         else if (liftInterpolationFraction[legIndex] > legStrideLiftKeyPoints[1]) {
           legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
-                                (strideHeight * (1 - liftInterpolationFraction[legIndex]) \
+                                (strideHeight * (1 - liftInterpolationFraction[legIndex]) /
                                                 (1 - legStrideLiftKeyPoints[1]));
         }
 
@@ -1309,6 +1309,7 @@ void writeStatesSerial() {
   static boolean writeKinematics = false;
   static boolean writeLeg = true;
   static boolean writeStates = true;
+  static boolean writeCycle = true;
   static boolean writeVelocities = true;
   static boolean writeStrideStart = true;
   static boolean writeLoopTime = true;
@@ -1388,6 +1389,13 @@ void writeStatesSerial() {
 
     if (move) {
       Serial.print("move ");
+      if (writeCycle) {
+        Serial.print(overallStrideCycle);
+        Serial.print(" ");
+        Serial.print(legStrideCycles[currentLeg]);
+        Serial.print(" | ");
+      }
+
       if (writeVelocities) {
         Serial.print("vel ");
         Serial.print(strideVelocity[0]);
