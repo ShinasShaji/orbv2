@@ -966,6 +966,7 @@ void updateLegEndpointPosition() {
     }
   }
 
+  // Individual leg control
   else if ((stand) && (!globalLegControl)){
     legIndexOffset = currentLeg * 3;
     
@@ -977,6 +978,7 @@ void updateLegEndpointPosition() {
             maxEndpointVelocity * (controller[0] - MIDSTATE) / MIDSTATE;
   }
 
+  // Global leg control
   else if ((stand) && (globalLegControl)) {
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
       legIndexOffset = legIndex * 3;
@@ -1312,6 +1314,7 @@ void writeStatesSerial() {
   static boolean writeCycle = true;
   static boolean writeVelocities = true;
   static boolean writeStrideStart = true;
+  static boolean writeContact = true;
   static boolean writeLoopTime = true;
   
   legIndexOffset = 3 * currentLeg;
