@@ -216,6 +216,7 @@ float legStrideCycles[LEGS] = {0, 0, 0, 0};
 // Key stride points
 float overallStrideStart = 0;
 float legStrideLift = 0;
+float legStrideLiftKeyPoints[2] = {0.25, 0.75}; 
 
 // Computed leg positions at beginning of lift
 float legStrideStartPosition[(3*LEGS)];
@@ -233,6 +234,7 @@ float maxVelocity[3] = {0, 0, 0};
 
 // Timing
 unsigned int strideBeginTime = 0;
+unsigned int liftBeginTime = 0;
 
 // Flags
 boolean strideLimitsViolated = false;
@@ -857,17 +859,50 @@ void updateLegEndpointPosition() {
     }
 
     // Transition from lift begin to stride start position for lifted legs
-    /*
+    interpolationFraction = float(currentTime - liftBeginTime) / 
+                            float(liftTime);
     
-    To implement
+    for (legIndex = 0; legIndex < 0; legIndex++) {
+      if (legContact[legIndex] == 0) {
+        legIndexOffset = 3 * legIndex;
+        
+        // x interpolation
+        legEndpointPosition[legIndexOffset + 0] = liftBeginEndpointPosition[legIndexOffset + 0] +
+          (legStrideStartPosition[legIndexOffset + 0] - liftBeginEndpointPosition[legIndexOffset + 0])
+          * interpolationFraction;
+        
+        // Interpolating stride height
+        // Using trapezoidal stride height interpolation
+        legEndpointPosition[legIndexOffset + 1] = liftBeginEndpointPosition[legIndexOffset + 1] +
+          (legStrideStartPosition[legIndexOffset + 1] - liftBeginEndpointPosition[legIndexOffset + 1])
+          * interpolationFraction;
 
-    */
+        // Leg lift
+        if (interpolationFraction < legStrideLiftKeyPoints[0]) {
+          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
+                                (strideHeight * interpolationFraction / legStrideLiftKeyPoints[0]);
+        } else if (interpolationFraction < legStrideLiftKeyPoints[1]) {
+          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
+                                strideHeight;
+        } else if (interpolationFraction > legStrideLiftKeyPoints[1]) {
+          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
+                                (strideHeight * (1 - interpolateFraction) \
+                                                (1 - legStrideLiftKeyPoints[1]));
+        }
+
+        // z interpolation
+        legEndpointPosition[legIndexOffset + 2] = liftBeginEndpointPosition[legIndexOffset + 2] +
+          (legStrideStartPosition[legIndexOffset + 2] - liftBeginEndpointPosition[legIndexOffset + 2])
+          * interpolationFraction;
+      }
+    }
 
     // Move planted leg endpoints according to stride velocities
+    // To implement yaw interpolation
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
-      legIndexOffset = 3 * legIndex;
-
       if (legContact[legIndex] == 1) {
+        legIndexOffset = 3 * legIndex;
+
         legEndpointPosition[legIndexOffset + 0] = 
               legEndpointPosition[legIndexOffset + 0] - 
               (strideVelocity[0] * float(currentTime - prevKinematic) / 1000);
@@ -906,6 +941,7 @@ void updateLegEndpointPosition() {
         }
       }
     }
+
     // If prematurely reached limits, advance overall cycle to leg lift keypoint
     if (strideLimitsViolated) {
       overallStrideCycle = overallStrideCycle + maxStrideDeviation;
