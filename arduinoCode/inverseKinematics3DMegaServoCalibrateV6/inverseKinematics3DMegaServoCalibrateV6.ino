@@ -1303,11 +1303,11 @@ void receiveSerialData() {
 
 // Function to write states to serial
 void writeStatesSerial() {
+  static boolean writeLeg = true;
   static boolean writeServo = false;
   static boolean writeLegAngles = false;
   static boolean writeServoAngles = false;
-  static boolean writeKinematics = false;
-  static boolean writeLeg = true;
+  static boolean writeKinematics = true;
   static boolean writeStates = true;
   static boolean writeCycle = true;
   static boolean writeVelocities = true;
@@ -1317,6 +1317,18 @@ void writeStatesSerial() {
   legIndexOffset = 3 * currentLeg;
 
   Serial.print("<");
+
+  if (writeLeg) {
+    Serial.print("leg ");
+    Serial.print(currentLeg);
+
+    if (legEnable[currentLeg]) {
+      Serial.print(" en ");
+    } else {
+      Serial.print(" na ");
+    }
+    Serial.print("| ");
+  }
 
   if (writeServo) {
     Serial.print("s ");
@@ -1358,18 +1370,6 @@ void writeStatesSerial() {
     Serial.print(" | ");
   }
 
-  if (writeLeg) {
-    Serial.print("leg ");
-    Serial.print(currentLeg);
-
-    if (legEnable[currentLeg]) {
-      Serial.print(" en ");
-    } else {
-      Serial.print(" na ");
-    }
-    Serial.print("| ");
-  }
-
   if (globalLegControl) {
     Serial.print("global ");
   }
@@ -1384,7 +1384,7 @@ void writeStatesSerial() {
     if (transition) {
       Serial.print("transition ");
       Serial.print(interpolationFraction);
-      Serial.print(" ");
+      Serial.print(" | ");
     }
 
     if (move) {
@@ -1395,7 +1395,6 @@ void writeStatesSerial() {
         Serial.print(legStrideCycles[currentLeg]);
         Serial.print(" | ");
       }
-
       if (writeVelocities) {
         Serial.print("vel ");
         Serial.print(strideVelocity[0]);
@@ -1412,6 +1411,14 @@ void writeStatesSerial() {
         Serial.print(legStrideStartPosition[legIndexOffset + 1]);
         Serial.print(" ");
         Serial.print(legStrideStartPosition[legIndexOffset + 2]);
+      }
+      if (writeContact) {
+        if (legContact[currentLeg] == 1) {
+          Serial.print("stride");
+        }
+        else {
+          Serial.print("lift");
+        }
       }
     } else {
       Serial.print("stay ");
