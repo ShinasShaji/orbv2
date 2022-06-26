@@ -824,18 +824,11 @@ void updateLegEndpointPosition() {
     twerkAngles[1] = 0;
     twerkAngles[2] = 0;
 
-    // Compute rotated leg offsets using angles in twerkAngles
+    // Compute rotated leg offsets using angles in twerkAngles -> rotatedLegOffsets
     computeRotatedLegOffsets();
 
-    // Finding per leg translation and translating leg endpoints
-    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
-      legIndexOffset = 3 * legIndex;
-      
-      for (int dim = 0; dim < 3; dim ++) {
-        twerkTranslations[legIndexOffset + dim] = 
-          legOffsetsRotated[legIndexOffset + dim] - legOffsets[legIndexOffset + dim];
-      }
-    }
+    // Finding per leg translation and translating leg endpoints -> twerkTranslations
+    computeTwerkTranslations();
 
     // Computing stride start positions
     for (legIndex = 0; legIndex < LEGS; legIndex ++) {
@@ -881,7 +874,7 @@ void updateLegEndpointPosition() {
           (legStrideStartPosition[legIndexOffset + 1] - liftBeginEndpointPosition[legIndexOffset + 1])
           * liftInterpolationFraction[legIndex];
 
-        // Leg lift, currently trapezoidal
+        // Leg lift, trapezoidal
         if (liftInterpolationFraction[legIndex] < legStrideLiftKeyPoints[0]) {
           legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
                                 (strideHeight * liftInterpolationFraction[legIndex] / 
@@ -910,28 +903,41 @@ void updateLegEndpointPosition() {
     }
 
 
-    // Move planted leg endpoints according to stride velocities
-    // To implement yaw interpolation
-    maxStrideDeviation = 0;
+    // Move planted leg endpoints according to stride velocities    
+    // Generating yaw angles to compute offset
+    twerkAngles[0] = strideVelocity[2] * float(currentTime - prevKinematic) / 1000;
+    twerkAngles[1] = 0;
+    twerkAngles[2] = 0;
 
+    // Compute rotated leg offsets using angles in twerkAngles -> rotatedLegOffsets
+    computeRotatedLegOffsets();
+
+    // Finding per leg translation and translating leg endpoints -> twerkTranslations
+    computeTwerkTranslations();
+
+    // Keeping track of maximum cycle deviation
+    maxStrideDeviation = 0;
+    
+    // Translating leg endpoints
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
       if (legContact[legIndex] == 1) {
         legIndexOffset = 3 * legIndex;
 
         legEndpointPosition[legIndexOffset + 0] = 
-              legEndpointPosition[legIndexOffset + 0] - 
+              legEndpointPosition[legIndexOffset + 0] - twerkTranslations[0] - 
               (strideVelocity[0] * float(currentTime - prevKinematic) / 1000);
         
         if ((legIndex == 1) || (legIndex == 3)) {
           legEndpointPosition[legIndexOffset + 2] =
-              legEndpointPosition[legIndexOffset + 2] -
+              legEndpointPosition[legIndexOffset + 2] - twerkTranslations[2] -
               (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
         } else {
           legEndpointPosition[legIndexOffset + 2] =
-              legEndpointPosition[legIndexOffset + 2] +
+              legEndpointPosition[legIndexOffset + 2] + twerkTranslations[2] +
               (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
         }
 
+        // Checking for leg endpoint limit violation
         for (int dim = 0; dim < 3; dim ++) {
           if (dim != 1) {
             if (legEndpointPosition[legIndexOffset + dim] > maxLegEndpointPosition[dim]) {
@@ -940,7 +946,8 @@ void updateLegEndpointPosition() {
             else if (legEndpointPosition[legIndexOffset + dim] < minLegEndpointPosition[dim]) {
               strideLimitsViolated = true;
             }
-
+            
+            // Updating maximum stride cycle deviation 
             if (strideLimitsViolated) {
               if ((legStrideLift - legStrideCycles[legIndex]) > maxStrideDeviation) {
                 maxStrideDeviation = legStrideLift - legStrideCycles[legIndex];
@@ -1043,6 +1050,20 @@ void computeRotatedLegOffsets() {
     legOffsetsRotated[legIndexOffset + 2] = 
               (legOffsetsRotatedTemp[legIndexOffset + 2] * cos(twerkAngles[2])) -
               (legOffsetsRotatedTemp[legIndexOffset + 1] * sin(twerkAngles[2]));
+  }
+}
+
+
+// Function to compute twerkTranslations
+void computeTwerkTranslations() {
+  // Finding per leg translation and translating leg endpoints
+  for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+    legIndexOffset = 3 * legIndex;
+      
+    for (int dim = 0; dim < 3; dim ++) {
+      twerkTranslations[legIndexOffset + dim] = 
+        legOffsetsRotated[legIndexOffset + dim] - legOffsets[legIndexOffset + dim];
+    }
   }
 }
 
