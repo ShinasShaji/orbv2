@@ -234,6 +234,10 @@ float maxVelocity[3] = {0, 0, 0};
 // Timing
 unsigned int strideBeginTime = 0;
 
+// Flags
+boolean strideLimitsViolated = false;
+float maxStrideDeviation = 0;
+
 
 
 // Setup function
@@ -559,7 +563,7 @@ void initializeStrideParameters() {
 
 // Grab velocity state
 void updateStrideVelocity() {
-  strideVelocity[0] = maxVelocity[0] * float(controller[1] - MIDSTATE) / MIDSTATE;
+  strideVelocity[0] = - maxVelocity[0] * float(controller[1] - MIDSTATE) / MIDSTATE;
   strideVelocity[1] = maxVelocity[1] * float(controller[0] - MIDSTATE) / MIDSTATE;
   strideVelocity[2] = maxVelocity[2] * float(controller[2] - MIDSTATE) / MIDSTATE;
 }
@@ -784,7 +788,7 @@ void updateLegEndpointPosition() {
 
       // To compute leg stride start positions with stride velocities
       // Generating yaw angles to compute offset
-      twerkAngles[0] = strideVelocity[2] * strideTime;
+      twerkAngles[0] = strideVelocity[2] * strideTime / 2;
       twerkAngles[1] = 0;
       twerkAngles[2] = 0;
 
@@ -860,11 +864,54 @@ void updateLegEndpointPosition() {
     */
 
     // Move planted leg endpoints according to stride velocities
-    /*
+    for (legIndex = 0; legIndex < LEGS; legIndex++) {
+      legIndexOffset = 3 * legIndex;
 
-    To implement
+      if (legContact[legIndex] == 1) {
+        legEndpointPosition[legIndexOffset + 0] = 
+              legEndpointPosition[legIndexOffset + 0] - 
+              (strideVelocity[0] * float(currentTime - prevKinematic) / 1000);
+        
+        if ((legIndex == 1) || (legIndex == 3)) {
+          legEndpointPosition[legIndexOffset + 2] =
+              legEndpointPosition[legIndexOffset + 2] -
+              (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
+        } else {
+          legEndpointPosition[legIndexOffset + 2] =
+              legEndpointPosition[legIndexOffset + 2] +
+              (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
+        }
 
-    */
+        maxStrideDeviation = 0;
+
+        for (int dim = 0; dim < 3; dim ++) {
+          if (dim != 1) {
+            if (legEndpointPosition[legIndexOffset + dim] > maxLegEndpointPosition[dim]) {
+              legEndpointPosition[legIndexOffset + dim] = maxLegEndpointPosition[dim];
+
+              strideLimitsViolated = true;
+            }
+            else if (legEndpointPosition[legIndexOffset + dim] < minLegEndpointPosition[dim]) {
+              legEndpointPosition[legIndexOffset + dim] = minLegEndpointPosition[dim];
+
+              strideLimitsViolated = true;
+            }
+
+            if (strideLimitsViolated) {
+              if ((legStrideLift - legStrideCycles[legIndex]) > maxStrideDeviation) {
+                maxStrideDeviation = legStrideLift - legStrideCycles[legIndex];
+              }
+            }
+          }
+        }
+      }
+    }
+    // If prematurely reached limits, advance overall cycle to leg lift keypoint
+    if (strideLimitsViolated) {
+      overallStrideCycle = overallStrideCycle + maxStrideDeviation;
+
+      strideLimitsViolated = false;
+    }
   }
 
   else if ((stand) && (!globalLegControl)){
@@ -1194,10 +1241,11 @@ void writeStatesSerial() {
   static boolean writeLegAngles = false;
   static boolean writeServoAngles = false;
   static boolean writeKinematics = false;
-  static boolean writeLeg = false;
+  static boolean writeLeg = true;
   static boolean writeStates = true;
   static boolean writeVelocities = true;
   static boolean writeStrideStart = true;
+  static boolean writeLoopTime = true;
   
   legIndexOffset = 3 * currentLeg;
 
@@ -1299,6 +1347,11 @@ void writeStatesSerial() {
       Serial.print(" ");
       Serial.print(twerkTranslations[legIndexOffset + 2]);
     }
+  }
+
+  if (writeLoopTime) {
+    Serial.print(" ");
+    Serial.print(currentTime - prevKinematic);
   }
 
   Serial.println(">");
