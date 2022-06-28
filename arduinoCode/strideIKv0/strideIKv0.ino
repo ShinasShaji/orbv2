@@ -25,7 +25,7 @@ unsigned int prevKinematic = 0;                // ms
 // Refresh times
 unsigned int kinematicsRefreshTime = 25;       // ms
 unsigned int sitKinematicsRefreshTime = 100;   // ms
-unsigned int standKinematicsRefreshTime = 25;  // ms
+unsigned int standKinematicsRefreshTime = 50;  // ms
 
 // Transition timing
 unsigned int transitionBeginTime = 0;
@@ -369,6 +369,9 @@ void loop() {
     if ((!stand) && (!transition)) {
       // Nothing to do here
     }
+
+    // Updating previous loop time
+    prevKinematic = currentTime;
   } 
 }
 
@@ -1116,9 +1119,7 @@ void writeAnglesToServos() {
 
 
 // Inverse kinematics algorithm
-void evaluateInverseKinematics(){
-  prevKinematic = currentTime;
-    
+void evaluateInverseKinematics(){    
   /* 
    * IK algorithm begin 
    */
@@ -1280,7 +1281,7 @@ void writeStatesSerial() {
   }
 
   if (writeKinematics) {
-    Serial.print("k ");
+    Serial.print("k");
 
     for (int dim = legIndexOffset; dim < (legIndexOffset+3); dim++) {
       Serial.print(" ");
