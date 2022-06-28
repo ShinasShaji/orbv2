@@ -227,6 +227,7 @@ float legStrideStartShiftFraction[2] = {0, 0};
 unsigned int strideTime = 6000;
 unsigned int liftTime = 4000;
 float maxVelocity[3] = {0, 0, 0};
+float strideLimitScaler = 0.75;
 
 // Timing
 unsigned int liftBeginTime[LEGS] = {0, 0, 0, 0};
@@ -503,6 +504,16 @@ void setLegEndpointToStand() {
   }
 }
 
+// Initialize stay leg endpoint from stand init
+void initializeLegEndpointOnStay() {
+  for (legIndex = 0; legIndex < LEGS; legIndex++) {
+    legIndexOffset = 3 * currentLeg;
+    for (int dim = 0; dim < 3; dim ++) {
+      legEndpointStayInit[legIndexOffset + dim] = legEndpointStandInit[legIndexOffset + dim];
+    }
+  }    
+}
+
 
 // Store legEndpoints on stay state
 void storeLegEndpointOnStay() {
@@ -531,9 +542,11 @@ void setLegAnglesToSit() {
 // Initialize stride parameters
 void initializeStrideParameters() {
   // Calculating max velocities
-  maxVelocity[0] = (minLegEndpointPosition[0] - maxLegEndpointPosition[0]) / strideTime;
-  maxVelocity[1] = (maxLegEndpointPosition[2] - minLegEndpointPosition[2]) / strideTime;
-  maxVelocity[2] = twerkAngleLimits[0] / strideTime;
+  maxVelocity[0] = (minLegEndpointPosition[0] - maxLegEndpointPosition[0]) 
+                    * strideLimitScaler / strideTime;
+  maxVelocity[1] = (maxLegEndpointPosition[2] - minLegEndpointPosition[2]) 
+                    * strideLimitScaler / strideTime;
+  maxVelocity[2] = twerkAngleLimits[0] * strideLimitScaler / strideTime;
 
   // Calculating key points of stride cycle
   overallStrideStart = 1 / float(LEGS);
@@ -547,6 +560,8 @@ void initializeStrideParameters() {
   legStrideStartShiftFraction[1] = 
                   abs(maxLegEndpointPosition[2] - legEndpointStandInit[2]) / 
                   abs(maxLegEndpointPosition[2] - minLegEndpointPosition[2]);
+
+  initializeLegEndpointOnStay();        
 
   overallStrideCycle = 0;
 }
@@ -739,8 +754,10 @@ void updateLegEndpointPosition() {
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
       legIndexOffset = legIndex * 3;
 
-      legEndpointPosition[legIndexOffset+1] = legEndpointPosition[legIndexOffset+1] + 
+      legEndpointStayInit[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1] + 
           maxEndpointVelocity * (controller[5] - controller[4]) / MIDSTATE;
+
+      legEndpointPosition[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1];
     }
 
     // Update stride velocities
@@ -804,18 +821,18 @@ void updateLegEndpointPosition() {
       if (legContact[legIndex] == 0) {
         legIndexOffset = 3 * legIndex;
 
-        legStrideStartPosition[legIndexOffset + 0] = legEndpointStandInit[legIndexOffset + 0]
+        legStrideStartPosition[legIndexOffset + 0] = legEndpointStayInit[legIndexOffset + 0]
                         + ((- strideVelocity[0] * strideTime) + twerkTranslations[0])
                         * legStrideStartShiftFraction[0];
 
-        legStrideStartPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1];
+        legStrideStartPosition[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1];
 
         if ((legIndex == 1) || (legIndex == 3)) {
-          legStrideStartPosition[legIndexOffset + 2] = legEndpointStandInit[legIndexOffset + 2]
+          legStrideStartPosition[legIndexOffset + 2] = legEndpointStayInit[legIndexOffset + 2]
                           + ((strideVelocity[1] * strideTime) + twerkTranslations[2])
                           * legStrideStartShiftFraction[1];
         } else {
-          legStrideStartPosition[legIndexOffset + 2] = legEndpointStandInit[legIndexOffset + 2]
+          legStrideStartPosition[legIndexOffset + 2] = legEndpointStayInit[legIndexOffset + 2]
                           + ((- strideVelocity[1] * strideTime) - twerkTranslations[2])
                           * legStrideStartShiftFraction[1];
         }
@@ -845,16 +862,16 @@ void updateLegEndpointPosition() {
 
         // Leg lift, trapezoidal
         if (liftInterpolationFraction[legIndex] < legStrideLiftKeyPoints[0]) {
-          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
+          legEndpointPosition[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1] - 
                                 (strideHeight * liftInterpolationFraction[legIndex] / 
                                                 legStrideLiftKeyPoints[0]);
         } 
         else if (liftInterpolationFraction[legIndex] < legStrideLiftKeyPoints[1]) {
-          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
-                                strideHeight;
+          legEndpointPosition[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1] - 
+                                 strideHeight;
         } 
         else if (liftInterpolationFraction[legIndex] > legStrideLiftKeyPoints[1]) {
-          legEndpointPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1] - 
+          legEndpointPosition[legIndexOffset + 1] = legEndpointStayInit[legIndexOffset + 1] - 
                                 (strideHeight * (1 - liftInterpolationFraction[legIndex]) /
                                                 (1 - legStrideLiftKeyPoints[1]));
         }
