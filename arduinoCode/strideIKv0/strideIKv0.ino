@@ -804,20 +804,20 @@ void updateLegEndpointPosition() {
       if (legContact[legIndex] == 0) {
         legIndexOffset = 3 * legIndex;
 
-        legStrideStartPosition[legIndexOffset + 0] = 
-                          ((- strideVelocity[0] * strideTime) + twerkTranslations[0])
-                            * legStrideStartShiftFraction[0];
+        legStrideStartPosition[legIndexOffset + 0] = legEndpointStandInit[legIndexOffset + 0]
+                        + ((- strideVelocity[0] * strideTime) + twerkTranslations[0])
+                        * legStrideStartShiftFraction[0];
 
         legStrideStartPosition[legIndexOffset + 1] = legEndpointPosition[legIndexOffset + 1];
 
         if ((legIndex == 1) || (legIndex == 3)) {
-          legStrideStartPosition[legIndexOffset + 2] = 
-                            ((strideVelocity[1] * strideTime) + twerkTranslations[2])
-                              * legStrideStartShiftFraction[1];
+          legStrideStartPosition[legIndexOffset + 2] = legEndpointStandInit[legIndexOffset + 2]
+                          + ((strideVelocity[1] * strideTime) + twerkTranslations[2])
+                          * legStrideStartShiftFraction[1];
         } else {
-          legStrideStartPosition[legIndexOffset + 2] = 
-                            ((- strideVelocity[1] * strideTime) - twerkTranslations[2])
-                              * legStrideStartShiftFraction[1];
+          legStrideStartPosition[legIndexOffset + 2] = legEndpointStandInit[legIndexOffset + 2]
+                          + ((- strideVelocity[1] * strideTime) - twerkTranslations[2])
+                          * legStrideStartShiftFraction[1];
         }
       }
     }
