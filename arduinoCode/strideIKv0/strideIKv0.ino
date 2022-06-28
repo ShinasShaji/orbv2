@@ -911,16 +911,16 @@ void updateLegEndpointPosition() {
 
         legEndpointPosition[legIndexOffset + 0] = 
               legEndpointPosition[legIndexOffset + 0] - twerkTranslations[0] - 
-              (strideVelocity[0] * float(currentTime - prevKinematic) / 1000);
+              (- strideVelocity[0] * float(currentTime - prevKinematic));
         
         if ((legIndex == 1) || (legIndex == 3)) {
           legEndpointPosition[legIndexOffset + 2] =
               legEndpointPosition[legIndexOffset + 2] - twerkTranslations[2] -
-              (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
+                (strideVelocity[1] * float(currentTime - prevKinematic));
         } else {
           legEndpointPosition[legIndexOffset + 2] =
               legEndpointPosition[legIndexOffset + 2] + twerkTranslations[2] +
-              (strideVelocity[1] * float(currentTime - prevKinematic) / 1000);
+                (strideVelocity[1] * float(currentTime - prevKinematic));
         }
 
         // Checking for leg endpoint limit violation
