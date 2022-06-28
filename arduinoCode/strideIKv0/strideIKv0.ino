@@ -790,23 +790,6 @@ void updateLegEndpointPosition() {
     // Leg stride cycle states updated
 
 
-    // Flag each leg for lift at lift key stride points
-    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
-      legIndexOffset = 3 * legIndex;
-
-      if ((legStrideCycles[legIndex] >= legStrideLift) && (legContact[legIndex] == 1)) {
-        legContact[legIndex] = 0;
-        liftBeginTime[legIndex] = currentTime;
-        
-        // Store position of leg endpoint at lift begin
-        for (int dim = 0; dim < 3; dim ++) {
-          liftBeginEndpointPosition[legIndexOffset + dim] = 
-                                              legEndpointPosition[legIndexOffset + dim];
-        }
-      }
-    }
-
-
     // To compute leg stride start positions with stride velocities
     // Generating yaw angles to compute offset
     twerkAngles[0] = strideVelocity[2] * strideTime / 2;
@@ -842,6 +825,33 @@ void updateLegEndpointPosition() {
       }
     }
     // Stride start positions computed
+
+
+    // Flag each leg for lift at lift key stride points
+    for (legIndex = 0; legIndex < LEGS; legIndex ++) {
+      legIndexOffset = 3 * legIndex;
+
+      if ((legStrideCycles[legIndex] >= legStrideLift) && (legContact[legIndex] == 1)) {
+        legContact[legIndex] = 0;
+        liftBeginTime[legIndex] = currentTime;
+        
+        // Store position of leg endpoint at lift begin
+        for (int dim = 0; dim < 3; dim ++) {
+          liftBeginEndpointPosition[legIndexOffset + dim] = 
+                                              legEndpointPosition[legIndexOffset + dim];
+        }
+
+        // Lift only if return required
+        for (int dim = 0; dim < 3; dim++) {
+          if (dim != 1) {
+            if (legStrideStartPosition[legIndexOffset + dim] == 
+                liftBeginEndpointPosition[legIndexOffset + dim]) {
+              legContact[legIndex] = 1;
+            }
+          }
+        }
+      }
+    }
 
 
     // Transition from lift begin to stride start position for lifted legs    
