@@ -78,7 +78,7 @@ float legLengths[LEGS] = {70,      // mm; length from hip to shoulder
                           150,     // mm; length from knee to foot center
                           5   };   // mm; foot depth
                                                    
-int legEnable[LEGS] = {0, 0, 0, 0};
+int legEnable[LEGS] = {1, 1, 1, 1};
 
 // Leg indexing
 int currentLeg = 0;
@@ -224,8 +224,8 @@ float liftBeginEndpointPosition[(3*LEGS)];
 float legStrideStartShiftFraction[2] = {0, 0};
 
 // Limits
-unsigned int strideTime = 6000;
-unsigned int liftTime = 4000;
+unsigned int strideTime = 3000;
+unsigned int liftTime = 2000;
 float maxVelocity[3] = {0, 0, 0};
 float strideLimitScaler = 0.75;
 
@@ -842,10 +842,10 @@ void updateLegEndpointPosition() {
         }
 
         // Lift only if return required
-        if ((legStrideStartPosition[legIndexOffset + 0] == 
-             liftBeginEndpointPosition[legIndexOffset + 0]) && 
-            (legStrideStartPosition[legIndexOffset + 2] == 
-             liftBeginEndpointPosition[legIndexOffset + 2])) {
+        if ((int(legStrideStartPosition[legIndexOffset + 0]) == 
+             int(liftBeginEndpointPosition[legIndexOffset + 0])) && 
+            (int(legStrideStartPosition[legIndexOffset + 2]) == 
+             int(liftBeginEndpointPosition[legIndexOffset + 2]))) {
 
           legContact[legIndex] = 1;
           
@@ -1332,11 +1332,11 @@ void writeStatesSerial() {
       }
       if (writeStrideStart) {
         Serial.print("start ");
-        Serial.print(legStrideStartPosition[legIndexOffset + 0]);
-        Serial.print(" ");
-        Serial.print(legStrideStartPosition[legIndexOffset + 1]);
-        Serial.print(" ");
-        Serial.print(legStrideStartPosition[legIndexOffset + 2]);
+        
+        for (int dim = legIndexOffset; dim < (legIndexOffset+3); dim++) {
+          Serial.print(" ");
+          Serial.print(int(legStrideStartPosition[dim]));
+        }
       }
       if (writeContact) {
         if (legContact[currentLeg] == 1) {
