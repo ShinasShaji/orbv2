@@ -141,6 +141,8 @@ float legEndpointStandInit[(3*LEGS)] = {00, 125, 85,  // mm; {back, down, outer}
 
 float legEndpointStayInit[(3*LEGS)];
 
+float maxEndpointVelocity = 150;  // mm/s
+ 
 // Setting leg endpoint limits
 float maxLegEndpointPosition[3] = {150, 250, 120};
 
@@ -297,7 +299,6 @@ void loop() {
     // Check for and update flags
     checkReset();
     checkLegChange();
-    checkGlobalLegControl();
     checkStand();
     checkMove();
     
@@ -1269,10 +1270,6 @@ void writeStatesSerial() {
       Serial.print(int(legEndpointPosition[dim]));
     }
     Serial.print(" | ");
-  }
-
-  if (globalLegControl) {
-    Serial.print("global ");
   }
   
   if (writeStates) {
