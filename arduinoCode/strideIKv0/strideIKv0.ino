@@ -842,13 +842,13 @@ void updateLegEndpointPosition() {
         }
 
         // Lift only if return required
-        for (int dim = 0; dim < 3; dim++) {
-          if (dim != 1) {
-            if (legStrideStartPosition[legIndexOffset + dim] == 
-                liftBeginEndpointPosition[legIndexOffset + dim]) {
-              legContact[legIndex] = 1;
-            }
-          }
+        if ((legStrideStartPosition[legIndexOffset + 0] == 
+             liftBeginEndpointPosition[legIndexOffset + 0]) && 
+            (legStrideStartPosition[legIndexOffset + 2] == 
+             liftBeginEndpointPosition[legIndexOffset + 2])) {
+
+          legContact[legIndex] = 1;
+          
         }
       }
     }
