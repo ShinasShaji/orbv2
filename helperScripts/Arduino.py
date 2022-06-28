@@ -4,6 +4,7 @@ import os
 import time
 import re
 import multiprocessing
+import csv
 
 import serial
 from serial.serialutil import SerialTimeoutException
@@ -21,7 +22,7 @@ class Arduino:
     testWord = "ping"
 
     writeVerbose = False
-    logToCsv = True
+    logToCsv = False
     verbose = True
 
     # Use different port name list for connection based on platform
@@ -122,7 +123,7 @@ class Arduino:
                     print("Serial read:", content)
 
                 if self.logToCsv:
-                    csvWriter.writerow(content.split())
+                    self.csvWriter.writerow(content.split())
 
                 self.syncEvent.set()
 
@@ -134,7 +135,8 @@ class Arduino:
     def closeConnection(self):
         """Close connection and exit"""
         print('Cleaning up and closing connection...\n')
-        csvFile.close()
+        if self.logToCsv:
+            self.csvFile.close()
 
         try:
             self.arduino.close()
