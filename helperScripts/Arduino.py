@@ -21,6 +21,7 @@ class Arduino:
     testWord = "ping"
 
     writeVerbose = False
+    logToCsv = True
     verbose = True
 
     # Use different port name list for connection based on platform
@@ -30,6 +31,10 @@ class Arduino:
     # Windows
     elif os.name == "nt":
         ports = ["COM8", "COM6"]
+
+    if logToCsv:
+        csvFile = open("logs/arduinoLog.csv", "w", encoding="UTF-8")
+        csvWriter = csv.writer(csvFile)
 
 
     def __init__(self):
@@ -116,6 +121,9 @@ class Arduino:
                 if self.verbose:
                     print("Serial read:", content)
 
+                if self.logToCsv:
+                    csvWriter.writerow(content.split())
+
                 self.syncEvent.set()
 
                 return content
@@ -126,6 +134,8 @@ class Arduino:
     def closeConnection(self):
         """Close connection and exit"""
         print('Cleaning up and closing connection...\n')
+        csvFile.close()
+
         try:
             self.arduino.close()
             self.connected = False
