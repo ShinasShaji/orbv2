@@ -45,11 +45,11 @@ int controller[STATES] = {MIDSTATE, MIDSTATE, MIDSTATE,
                                  0,        0};
 float filteredController[STATES];
 // Controller filtering
-boolean filterControllerStates = true;
+boolean filterControllerStates = false;
 float filterControllerWidth = 4;
 
 // State machine control variables
-boolean move = false;     // Move if true, else stay and twerk
+boolean walk = false;     // Move if true, else stay and twerk
 boolean stand = false;    // Stand if true, sit if false; if stand, IK enabled at setup()
 boolean transition = false;
 
@@ -224,8 +224,8 @@ float liftBeginEndpointPosition[(3*LEGS)];
 float legStrideStartShiftFraction[2] = {0, 0};
 
 // Limits
-unsigned int strideTime = 4000;
-unsigned int liftTime = 2000;
+unsigned int strideTime = 6000;
+unsigned int liftTime = 4000;
 float maxVelocity[3] = {0, 0, 0};
 
 // Timing
@@ -531,13 +531,13 @@ void setLegAnglesToSit() {
 // Initialize stride parameters
 void initializeStrideParameters() {
   // Calculating max velocities
-  maxVelocity[0] = (maxLegEndpointPosition[0] - minLegEndpointPosition[0]) / strideTime;
+  maxVelocity[0] = (minLegEndpointPosition[0] - maxLegEndpointPosition[0]) / strideTime;
   maxVelocity[1] = (maxLegEndpointPosition[2] - minLegEndpointPosition[2]) / strideTime;
   maxVelocity[2] = twerkAngleLimits[0] / strideTime;
 
   // Calculating key points of stride cycle
-  overallStrideStart = 1 / LEGS;
-  legStrideLift = strideTime / (strideTime + liftTime);
+  overallStrideStart = 1 / float(LEGS);
+  legStrideLift = float(strideTime) / float(strideTime + liftTime);
 
   // Fraction to shift position of leg endpoint at stride start if max, min leg endpoint 
   // positions not symmetric
@@ -623,16 +623,16 @@ void checkMove() {
   if ((controller[7]==1) && (moveChange==false)) {
     moveChange = true;
     
-    if (move) {
+    if (walk) {
       // Stay mode
-      move = false;
+      walk = false;
 
       // Store leg endpoints to stay on
       storeLegEndpointOnStay();
 
     } else {
       // Move mode
-      move = true;
+      walk = true;
 
       // Initialize move mode and stride parameters
       initializeStrideParameters();
@@ -691,7 +691,7 @@ void interpolateStand() {
 // Function to update leg endpoint position based on controller input
 void updateLegEndpointPosition() {
   // Hold leg endpoint positions or stay, aka twerk mode
-  if ((stand) && (!move)) {
+  if ((stand) && (!walk)) {
     // Load stored stay position
     loadLegEndpointsOnStay();
 
@@ -733,7 +733,7 @@ void updateLegEndpointPosition() {
   }
 
   // Walk / move cycle
-  else if ((stand) && (move)) {
+  else if ((stand) && (walk)) {
     // Get control inputs
     // Globally control robot height
     for (legIndex = 0; legIndex < LEGS; legIndex++) {
@@ -1285,8 +1285,8 @@ void writeStatesSerial() {
       Serial.print(" | ");
     }
 
-    if (move) {
-      Serial.print("move ");
+    if (walk) {
+      Serial.print("walk ");
       if (writeCycle) {
         Serial.print(overallStrideCycle);
         Serial.print(" ");
@@ -1312,10 +1312,10 @@ void writeStatesSerial() {
       }
       if (writeContact) {
         if (legContact[currentLeg] == 1) {
-          Serial.print("stride");
+          Serial.print(" stride");
         }
         else {
-          Serial.print("lift");
+          Serial.print(" lift");
         }
       }
     } else {
